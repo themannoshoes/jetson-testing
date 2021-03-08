@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/mj/repo1/jetson-inference/examples/mj-codemyown/imagenet.cpp
+jetson-utils/videoSource.h
+-
+jetson-utils/videoOutput.h
+-
+jetson-utils/cudaFont.h
+-
+jetson-inference/imageNet.h
+-
+signal.h
+-
+

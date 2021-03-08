@@ -1,0 +1,3 @@
+/home/mj/repo1/jetson-inference/examples/mj-codemyown/CMakeFiles/rebuild_cache.dir
+/home/mj/repo1/jetson-inference/examples/mj-codemyown/CMakeFiles/imagenet.dir
+/home/mj/repo1/jetson-inference/examples/mj-codemyown/CMakeFiles/edit_cache.dir

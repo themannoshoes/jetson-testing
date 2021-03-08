@@ -1,0 +1,3 @@
+/home/mj/repo1/jetson-inference/examples/mj-cuda-test/CMakeFiles/rebuild_cache.dir
+/home/mj/repo1/jetson-inference/examples/mj-cuda-test/CMakeFiles/mj-cuda.dir
+/home/mj/repo1/jetson-inference/examples/mj-cuda-test/CMakeFiles/edit_cache.dir
