@@ -2,6 +2,9 @@
 # require CMake 2.8 or greater
 cmake_minimum_required(VERSION 2.8)
 
+file(GLOB imagenetSources *.cpp *.cu)
+file(GLOB imagenetIncludes *.h )
+
 # declare my-recognition project
 project(imagenet)
 
@@ -14,8 +17,12 @@ find_package(jetson-inference)
 # CUDA is required
 find_package(CUDA)
 
+include_directories()
+
 # compile the my-recognition program
-cuda_add_executable(imagenet imagenet.cpp)
+cuda_add_executable(imagenet ${imagenetSources})
+
+
 
 # link my-recognition to jetson-inference library
 target_link_libraries(imagenet jetson-inference)

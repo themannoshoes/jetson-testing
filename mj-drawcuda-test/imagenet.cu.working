@@ -39,12 +39,66 @@
 #include <jetson-utils/imageIO.h>
 #include <jetson-utils/cudaColorspace.h>
 #include <jetson-utils/cudaOverlay.h>
+#include "mj-draw.h"
 
 #ifdef HEADLESS
 	#define IS_HEADLESS() "headless"	// run without display
 #else
 	#define IS_HEADLESS() (const char*)NULL
 #endif
+
+int min_of_them(int a, int b){
+	return a < b ? a : b;
+} 
+
+__global__ void gpudrawX_mj (uchar3 * img, int width, int height, int n)
+{
+	uchar3 pixel_temp;
+	pixel_temp.x = 0;
+	pixel_temp.y = 250;
+	pixel_temp.z = 0;
+
+    int i = threadIdx.x;
+	int head_x_axis = (width - n )/2;
+    if(i < n){
+		img[height/2 * width + (head_x_axis + i)] = pixel_temp;
+
+		//two more code below is to add thickness 
+		img[(height/2 -1)* width + (head_x_axis + i)] = pixel_temp;
+		img[(height/2 +1)* width + (head_x_axis + i)] = pixel_temp;
+	}
+}
+
+__global__ void gpudrawY_mj (uchar3 * img, int width, int height, int n)
+{
+	uchar3 pixel_temp;
+	pixel_temp.x = 0;
+	pixel_temp.y = 250;
+	pixel_temp.z = 0;
+
+    int i = threadIdx.x;
+	int head_y_axis = (height - n) /2;
+
+	if(i < n){
+		img[(i + head_y_axis) * width + width/2] = pixel_temp;
+
+		//two more code below is to add thickness 
+		img[(i + head_y_axis) * width + width/2 -1] = pixel_temp;
+		img[(i + head_y_axis) * width + width/2 + 1] = pixel_temp;
+	}
+}
+
+void mj_draw_test(uchar3* img, int width, int height, int cross_len)
+{
+	if(cross_len > width
+	|| cross_len > height){
+
+		cross_len = min_of_them(width, height);
+	} 
+//	cross_len = 200;
+    gpudrawX_mj<<<1, cross_len>>>( img, width, height, cross_len);
+	gpudrawY_mj<<<1, cross_len>>>( img, width, height, cross_len);
+}
 
 
 bool signal_recieved = false;
@@ -128,22 +182,12 @@ int main( int argc, char** argv )
 	}
 
 
-	/*
-	 * create recognition network
-	 */
-	imageNet* net = imageNet::Create(cmdLine);
-	
-	if( !net )
-	{
-		LogError("imagenet:  failed to initialize imageNet\n");
-		return 0;
-	}
 
 	/********************************************************mj add, *******************************************************/
-	float4 * img = NULL;
 	uchar3 * img_inA = NULL;
 	uchar3 * img_inB = NULL;
 	uchar3 * img_out = NULL;
+	
 
 	
 	//init the dimensionsA & B
@@ -168,14 +212,16 @@ int main( int argc, char** argv )
 		LogError("cudaallocmem for img_out  failed\n");
 		return 0;
 	}
+    
+
 
 	CUDA(cudaOverlay(img_inA, dimsA, img_out, dimsA, 0, 0));
-	CUDA(cudaOverlay(img_inB, dimsA, img_out, dimsA, 0, 0));
-	// if(CUDA_FAILED(cudaConvertColor(img_inA, IMAGE_RGB8, img_out, IMAGE_RGBA32F, dimsA.x, dimsA.y)))
-	// {
-	// 	LogError(" cudaconvertcolor  failed\n");
-	// 	return 0;
-	// }
+	/** mj drawing test***/
+//	int cross_len = dimsA.x /2;
+    mj_draw_test(img_out, dimsA.x, dimsA.y, dimsA.y / 2);
+
+	CUDA(cudaDeviceSynchronize());
+
 
 	if(!saveImage("images/test/horse_overlay.jpg", img_out, dimsA.x, dimsA.y, 255, make_float2(0,255) ) )
 	{
@@ -203,37 +249,23 @@ int main( int argc, char** argv )
 		}
 
 
-		/***************************************************************************************mj add: cudaallocmemory test******************/
-		if(!cudaAllocMapped(&img, input->GetWidth(), input->GetHeight()))
+
+
+		if( font != NULL )
 		{
-			LogError("mj cudaallocmapped failed \n");
-			return 0;
+			char str1[256];
+			sprintf(str1, "MJ testing, first text on cuda");
+			font->OverlayText(image, input->GetWidth(), input->GetHeight(),
+							str1, 5, input->GetHeight() / 2, make_float4(255, 255, 255, 255), make_float4(0, 0, 0, 100));
+		}else{
+
+			LogError("font overlay failed \n");
+			continue;
 		}
 
+        CUDA(cudaDeviceSynchronize());
+//		mj_draw_test(image, input->GetWidth(), input->GetHeight(), input->GetHeight() / 2);
 
-		// classify image
-		float confidence = 0.0f;
-		const int img_class = net->Classify(image, input->GetWidth(), input->GetHeight(), &confidence);
-	
-		if( img_class >= 0 )
-		{
-			LogVerbose("imagenet:  %2.5f%% class #%i (%s)\n", confidence * 100.0f, img_class, net->GetClassDesc(img_class));	
-
-			if( font != NULL )
-			{
-				char str[256];
-				char str1[256];
-				sprintf(str, "%05.2f%% %s", confidence * 100.0f, net->GetClassDesc(img_class));
-				sprintf(str1, "MJ testing, first text on cuda");
-				font->OverlayText(image, input->GetWidth(), input->GetHeight(),
-						        str, 5, 5, make_float4(255, 255, 255, 255), make_float4(0, 0, 0, 100));
-					
-				font->OverlayText(image, input->GetWidth(), input->GetHeight(),
-								str1, 5, input->GetHeight() / 2, make_float4(255, 255, 255, 255), make_float4(0, 0, 0, 100));
-
-
-			}
-		}	
 
 		// render outputs
 		if( output != NULL )
@@ -242,7 +274,7 @@ int main( int argc, char** argv )
 
 			// update status bar
 			char str[256];
-			sprintf(str, "TensorRT %i.%i.%i | %s | Network %.0f FPS", NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH, net->GetNetworkName(), net->GetNetworkFPS());
+			sprintf(str, "TensorRT %i.%i.%i | 000 | Network 000 FPS", NV_TENSORRT_MAJOR, NV_TENSORRT_MINOR, NV_TENSORRT_PATCH);
 			output->SetStatus(str);	
 
 			// check if the user quit
@@ -250,13 +282,9 @@ int main( int argc, char** argv )
 				signal_recieved = true;
 		}
 
-		// print out timing info
-		net->PrintProfilerTimes();
 	}
 	
 	/************************************************* mj add: *****************************************************/
-	CUDA(cudaDeviceSynchronize());
-	CUDA(cudaFreeHost(img));
     CUDA(cudaDeviceSynchronize());
 	CUDA(cudaFreeHost(img_out));
 
@@ -267,8 +295,6 @@ int main( int argc, char** argv )
 	
 	SAFE_DELETE(input);
 	SAFE_DELETE(output);
-	SAFE_DELETE(net);
-	
 	
 	LogVerbose("imagenet:  shutdown complete.\n");
 	return 0;
