@@ -168,7 +168,7 @@ int main( int argc, char** argv )
 			}
 		// }
 	
-		mj_draw_test(image, input->GetWidth(), input->GetHeight(), input->GetHeight() / 2);
+		mj_draw_test(image, input->GetWidth(), input->GetHeight(), input->GetHeight() / 2, 8);
 		//CUDA(cudaDeviceSynchronize());
 		// render outputs
 		if( output != NULL )
