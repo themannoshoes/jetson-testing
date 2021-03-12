@@ -25,6 +25,7 @@
 
 #include <jetson-utils/cudaFont.h>
 #include <jetson-inference/imageNet.h>
+#include <jetson-utils/cudaResize.h>
 
 #include <signal.h>
 
@@ -132,7 +133,9 @@ int main( int argc, char** argv )
 	// 	return 0;
 	// }
 
-
+	static uint log_flag = 1;
+	const int height_restrict = 1080;
+	const int width_restrict = 1920;
 	/*
 	 * processing loop
 	 */
@@ -140,7 +143,7 @@ int main( int argc, char** argv )
 	{
 		// capture next image image
 		uchar3* image = NULL;
-
+		
 		if( !input->Capture(&image, 1000) )
 		{
 			// check for EOS
@@ -150,7 +153,12 @@ int main( int argc, char** argv )
 			LogError("imagenet:  failed to capture next frame\n");
 			continue;
 		}
+		if(log_flag  == 1){
+			log_flag = 0;
+			LogError("the img height: %d  img width: %d\n", input->GetHeight(), input->GetWidth());
 
+		}
+		cudaResize(image, input->GetWidth(), input->GetHeight(), image, width_restrict, height_restrict);
 		// // classify image
 		// float confidence = 0.0f;
 		// const int img_class = net->Classify(image, input->GetWidth(), input->GetHeight(), &confidence);
@@ -163,17 +171,17 @@ int main( int argc, char** argv )
 			{
 				char str[256];
 				sprintf(str, "mj no net test");
-				font->OverlayText(image, input->GetWidth(), input->GetHeight(),
+				font->OverlayText(image, width_restrict, height_restrict,
 						        str, 5, 5, make_float4(255, 255, 255, 255), make_float4(0, 0, 0, 100));
 			}
 		// }
-	
-		mj_draw_test(image, input->GetWidth(), input->GetHeight(), input->GetHeight() / 2, 8);
+
+		mj_draw_test(image, width_restrict, height_restrict, height_restrict /2, 8);
 		//CUDA(cudaDeviceSynchronize());
 		// render outputs
 		if( output != NULL )
 		{
-			output->Render(image, input->GetWidth(), input->GetHeight());
+			output->Render(image, width_restrict, height_restrict);
 
 			// update status bar
 			char str[256];
