@@ -5,7 +5,7 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "person_publisher");
     ros::NodeHandle n;
-    ros::Publisher person_info_pub = n.advertise<learning_topic::Person>("/person_info", 10);
+    ros::Publisher person_info_pub = n.advertise<learning_topic::Person>("/mj_person_info", 10);
     ros::Rate loop_rate(1);
 
     int count = 0;
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 
         person_info_pub.publish(person_msg);
 
-        ROS_INFO("Publish Person Info: name: %s  age: %d  sex:%d",
+        ROS_INFO("Publish MJ Person Info: name: %s  age: %d  sex:%d",
                 person_msg.name.c_str(), person_msg.age, person_msg.sex);
 
         loop_rate.sleep();
