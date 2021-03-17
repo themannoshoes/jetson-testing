@@ -9,7 +9,7 @@ int main(int argc, char ** argv)
     //we new a nodehandle
     ros::NodeHandle node;
 
-    //we try to find a service named "/spawn", when "/spawn" is found, we new a client to connect the server
+    //we try to find a service named "/spawn", when "/spawn" is found, we new a client connected the server
     ros::service::waitForService("/spawn");
     ros::ServiceClient add_turtle = node.serviceClient<turtlesim::Spawn>("/spawn");
 
