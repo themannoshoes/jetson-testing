@@ -1,10 +1,50 @@
 #include <stdio.h>
 #include "mj-draw.h"
 #include <jetson-utils/cudaUtility.h>
+#include <math.h>
 
 int min_of_them(int a, int b){
 	return a < b ? a : b;
 } 
+
+__global__ void gpuDrawCircle(uchar3 * img, int width, int height, int radius, int thickness)
+{
+	uchar3 pixel_temp;
+	pixel_temp.x = 0;
+	pixel_temp.y = 250;
+	pixel_temp.z = 0;
+
+	if(thickness > 8
+	|| thickness < 0){
+		thickness = 8;
+	}
+
+    int box_x = blockIdx.x * blockDim.x + threadIdx.x;
+	int box_y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	int img_x = ((float)width - 2*radius)/2 + box_x;
+	int img_y = ((float)height - 2*radius)/2 + box_y;
+
+	if(img_x >= width
+	|| img_y >= height){
+		return;
+	}
+
+	if(box_x >= (radius*2)
+	|| box_y >= (radius*2)){
+		return;
+	}
+
+	float result = (box_x - radius) * (box_x - radius);
+	result = result + (box_y - radius) * (box_y - radius);
+//	result = result - radius * radius;
+	
+	if( result - (float)radius*radius <= 0
+	&&  result - (float)radius*radius >= -200 ){
+		img[img_y * width + img_x] = pixel_temp;	
+	}
+
+}
 
 __global__ void gpuDrawBox(uchar3 * img, int width, int height, int box_width, int box_height, int thickness)
 {
@@ -189,4 +229,18 @@ void mj_drawBox_test(uchar3* img, int width, int height, int box_w, int box_h, i
 	dim3 gridDim(iDivUp(box_w, blockDim.x), iDivUp(box_h, blockDim.y));
 
     gpuDrawBox<<<gridDim, blockDim>>>( img, width, height, box_w, box_h, thickness);
+}
+
+void mj_drawCircle_test(uchar3 * img, int width, int height, int radius, int thickness)
+{
+
+	if((radius * 2) > width
+	|| (radius * 2) > height){
+		return ;
+	} 
+
+	dim3 blockDim(8,8);
+	dim3 gridDim(iDivUp(radius*2, blockDim.x), iDivUp(radius*2, blockDim.y));
+	gpuDrawCircle<<<gridDim, blockDim>>>(img, width, height, radius, thickness);
+
 }

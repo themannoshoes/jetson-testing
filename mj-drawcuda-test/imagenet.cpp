@@ -175,8 +175,9 @@ int main( int argc, char** argv )
 						        str, 5, 5, make_float4(255, 255, 255, 255), make_float4(0, 0, 0, 100));
 			}
 		// }
-
-		mj_drawBox_test(image, width_restrict, height_restrict, width_restrict/ 2,height_restrict /2, 3);
+		
+		mj_drawCircle_test(image, width_restrict, height_restrict, 100, 3);
+		// mj_drawBox_test(image, width_restrict, height_restrict, width_restrict/ 2,height_restrict /2, 3);
 		// mj_draw_test(image, width_restrict, height_restrict, height_restrict /2, 8);
 		//CUDA(cudaDeviceSynchronize());
 		// render outputs
