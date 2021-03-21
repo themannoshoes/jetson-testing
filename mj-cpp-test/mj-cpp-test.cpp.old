@@ -1,0 +1,29 @@
+#include <iostream>
+
+int main(void)
+{
+    std::cout << "input a number: " << std::endl;
+    int a = 0, b = 0, c = 0;
+
+    while(std::cin.peek() != '\0' )
+    {
+        std::cin >> a;
+        b +=a;
+    }
+    std::cout << "sumUp is : "<< b << std::endl;
+    // scanf("%d%d%d", &a ,&b, &c);
+    // printf("%d, %d, %d\n",a,b,c );
+    return 0;
+    
+    while(std::cin >> a){
+        b +=a;
+        if(std::cin.peek() == '\n')
+        break;
+
+    }
+    std::cout << "sumUp is : "<< b << std::endl;
+    // scanf("%d%d%d", &a ,&b, &c);
+    // printf("%d, %d, %d\n",a,b,c );
+    return 0;
+
+}
