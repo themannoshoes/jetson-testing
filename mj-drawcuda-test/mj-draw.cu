@@ -1,11 +1,76 @@
 #include <stdio.h>
 #include "mj-draw.h"
 #include <jetson-utils/cudaUtility.h>
+#include <jetson-utils/cudaVector.h>
 #include <math.h>
+
 
 int min_of_them(int a, int b){
 	return a < b ? a : b;
 } 
+
+inline __host__ __device__ float4 alpha_blend( const float4& bg, const float4& fg )
+{
+	const float alpha = fg.w / 255.0f;
+	const float ialph = 1.0f - alpha;
+	
+	return make_float4(alpha * fg.x + ialph * bg.x,
+				    alpha * fg.y + ialph * bg.y,
+				    alpha * fg.z + ialph * bg.z,
+				    bg.w);
+} 
+
+__global__ void gpuBlendBOx( uchar3* input, uchar3* output, int imgWidth, int imgHeight)
+{
+
+	float4 color_temp, color_temp1;
+	color_temp.x = 0;
+	color_temp.y = 0;
+	color_temp.z = 200;
+	color_temp.w = 125;
+
+	color_temp1.x = 200;
+	color_temp1.y = 0;
+	color_temp1.z = 0;
+	color_temp1.w = 125;
+
+	
+	const float px_glyph = 1;
+	const float px_glyph1 = 1;
+
+    int box_x = blockIdx.x * blockDim.x + threadIdx.x;
+	int box_y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	int img_x = (float)imgWidth/4 + box_x;
+	int img_y = (float)imgHeight/4 + box_y;
+
+	if(img_x >= imgWidth
+	|| img_y >= imgHeight){
+		return;
+	}
+
+	if(box_x >= (imgWidth/2)
+	|| box_y >= (imgHeight/2)){
+		return;
+	}
+
+
+	const float4 px_font = make_float4(px_glyph * color_temp.x, px_glyph * color_temp.y, px_glyph * color_temp.z, px_glyph * color_temp.w);
+	const float4 px_in   = cast_vec<float4>(input[img_y * imgWidth + img_x]);
+
+	const float4 px_font1 = make_float4(px_glyph1 * color_temp1.x, px_glyph1 * color_temp1.y, px_glyph1 * color_temp1.z, px_glyph1 * color_temp1.w);
+	const float4 px_in1   = cast_vec<float4>(input[img_y * imgWidth + img_x]);
+	
+
+	if(box_x > imgWidth/8*3
+	&& box_y > imgHeight/8*3){
+		output[img_y * imgWidth + img_x] = cast_vec<uchar3>(alpha_blend(px_in1, px_font1));	
+	}else{
+		output[img_y * imgWidth + img_x] = cast_vec<uchar3>(alpha_blend(px_in, px_font));
+	}
+
+
+}
 
 __global__ void gpuDrawCircle(uchar3 * img, int width, int height, int radius, int thickness)
 {
@@ -242,5 +307,14 @@ void mj_drawCircle_test(uchar3 * img, int width, int height, int radius, int thi
 	dim3 blockDim(8,8);
 	dim3 gridDim(iDivUp(radius*2, blockDim.x), iDivUp(radius*2, blockDim.y));
 	gpuDrawCircle<<<gridDim, blockDim>>>(img, width, height, radius, thickness);
+
+}
+
+void mj_drawBlend_test(uchar3 * img, int width, int height, int thickness)
+{
+
+	dim3 blockDim(8,8);
+	dim3 gridDim(iDivUp(width/2, blockDim.x), iDivUp(height/2, blockDim.y));
+ 	gpuBlendBOx<<<gridDim, blockDim>>>(img, img, width, height);
 
 }
