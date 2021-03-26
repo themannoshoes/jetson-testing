@@ -23,10 +23,10 @@ typedef struct _data_information{
     uint16_t   data_name_id;
     S_TYPE_ID  data_type_id;
     uint8_t    data_size;
-    uint8_t  _8_;
-    uint16_t _16_;
-    uint32_t _32_;
-    uint64_t _64_;
+    int8_t  _8_;
+    int16_t _16_;
+    int32_t _32_;
+    int64_t _64_;
     float    _f_;
     double   _db_;
     
@@ -59,6 +59,7 @@ void sendout_table()
 uint8_t get_size_of_datatype(S_TYPE_ID datatype_id)
 {
     switch(datatype_id){
+       default:
        case ST_ID_UINT8: //uint8_t 
        case ST_ID_INT8: //int8_t 
           return 1;
@@ -92,12 +93,12 @@ void init_store_sturcture(store_type * store_p){
 
 void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info * one_data)
 {
-    uint16_t table_size = *(__packed uint16_t *)(table_p);
+    uint16_t table_data_amount = *(__packed uint16_t *)(table_p);
     uint32_t data_name_id_offset = data_snum * 2 + 4;
  
     uint8_t * temp_table_cursor = NULL;
  
-    if(data_name_id_offset > table_size - 1){
+    if(data_name_id_offset > (table_data_amount -1) * sizeof(uint16_t) + 4){
         return;
     }
     temp_table_cursor = table_p + data_name_id_offset;
@@ -139,7 +140,7 @@ uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_
         temp_size += one_data.data_size; 
         count_up ++;
     }
-    return temp_size;
+    return temp_size - one_data.data_size;
 }
 
 uint16_t calculate_data_unit_dim(void * table_p)
@@ -170,6 +171,7 @@ void store_data_unit_in_mem(store_type * store_p, uint8_t * table_p, uint32_t ti
       store_p->start_flag = 1;
       store_p->data_num_in_unit = *(__packed uint16_t *)table_p;
       store_p->unit_data_dim = calculate_data_unit_dim(table_p);
+      store_p->unit_table = malloc(store_p->data_num_in_unit * 2 + 4);
       memmove((void *)store_p->unit_table, (void *)table_p, store_p->data_num_in_unit *2 + 4); 
    }
    if( (uint8_t *)store_p->current_write_cursor + store_p->unit_data_dim + 4 > store_p->store_mem_tail_p + 1){
@@ -294,11 +296,8 @@ void test_store_code(uint32_t timestamp)
     uint8_t store_count = 3;
     
     store_type store_entity;
-    store_entity.unit_table = malloc(4 + 3*2);
-    if(store_entity.unit_table == NULL){
-        return;
-    }
-    uint8_t * table_p = store_entity.unit_table;
+
+    uint8_t * table_p = malloc(4 + 3*sizeof(int16_t));;
  
     *(__packed uint16_t *)(table_p + 0) = 3; //total num
     *(__packed uint16_t *)(table_p + 2) = 1; //version id
@@ -316,4 +315,5 @@ void test_store_code(uint32_t timestamp)
     for(uint8_t i = 0;i < 3; i++){
         seek_one_data_in_store_test(table_p, store_entity.current_read_cursor, i, &temp_one_data[i]);
     }
+
 }

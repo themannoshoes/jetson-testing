@@ -5,8 +5,7 @@
 #include <stdint.h>
 #include "packer.h"
 
-
-
+void test_store_code(uint32_t timestamp);
 
 
 #endif
