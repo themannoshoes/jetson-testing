@@ -167,19 +167,25 @@ int main( int argc, char** argv )
 		// {
 			// LogVerbose("imagenet:  %2.5f%% class #%i (%s)\n", confidence * 100.0f, img_class, net->GetClassDesc(img_class));	
 
-			if( font != NULL )
-			{
-				char str[256];
-				sprintf(str, "mj no net test");
-				font->OverlayText(image, width_restrict, height_restrict,
-						        str, 5, 5, make_float4(255, 255, 255, 255), make_float4(0, 0, 0, 100));
-			}
+			// if( font != NULL )
+			// {
+			// 	char str[256];
+			// 	char str1[256];
+			// 	sprintf(str1, "string line2 ");
+			// 	sprintf(str, "mj no net test");
+			// 	font->OverlayText(image, width_restrict, height_restrict,
+			// 			        str, 5, 5, make_float4(255, 255, 255, 255), make_float4(0, 0, 0, 100));
+			// 	font->OverlayText(image, width_restrict, height_restrict,
+			// 			        str1, 50, 50, make_float4(0, 255, 0, 100), make_float4(0, 0, 0, 0),0);
+				
+			// }
 		// }
-		
+		mj_text_app(image, width_restrict, height_restrict);
+
      	mj_drawBlend_test(image, width_restrict, height_restrict, 3);
-		// mj_drawCircle_test(image, width_restrict, height_restrict, 100, 3);
-		// mj_drawBox_test(image, width_restrict, height_restrict, width_restrict/ 2,height_restrict /2, 3);
-		// mj_draw_test(image, width_restrict, height_restrict, height_restrict /2, 8);
+		mj_drawCircle_test(image, width_restrict, height_restrict, 100, 3);
+		mj_drawBox_test(image, width_restrict, height_restrict, width_restrict/ 2,height_restrict /2, 3);
+		mj_draw_test(image, width_restrict, height_restrict, height_restrict /4, 4);
 		//CUDA(cudaDeviceSynchronize());
 		// render outputs
 		if( output != NULL )
@@ -214,3 +220,69 @@ int main( int argc, char** argv )
 	return 0;
 }
 
+int mj_text_app(uchar3 * image, int width, int height)
+{
+	
+	imu_info_t       imu_data;
+	tele_cam_info_t  cam_data;
+	stream_info_t    stream_data;
+	g_distance_info_t g_distance_data;
+
+	cudaFont* font = cudaFont::Create();
+	if( !font )
+	{
+		LogError("imagenet:  failed to load font for overlay\n");
+		return 0;
+	}
+
+    imu_data.year = 2020;
+	imu_data.month = 3;
+	imu_data.date  = 6;
+	imu_data.hour  = 13;
+	imu_data.minute = 54;
+	imu_data.second = 45;
+	imu_data.yaw  = 1234.2344;
+	imu_data.roll = 987654321.4556;
+	imu_data.pitch  = 123459876.7648;
+	imu_data.longitude = 125.3;
+	imu_data.latitude  = 34.7;
+	imu_data.height    = 14000;
+
+	char str_temp[256];
+	
+	std::string str_time;
+	sprintf(str_temp, "%d-%d-%d %d:%d:%d", imu_data.year, imu_data.month, imu_data.date, imu_data.hour, imu_data.minute, imu_data.second);
+	font->OverlayText(image, width, height,
+					str_temp, width - 300, 40, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	sprintf(str_temp, "yaw: %.3f", imu_data.yaw);
+	font->OverlayText(image, width, height,
+					str_temp, 5, 80, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	sprintf(str_temp, "pitch: %.3f", imu_data.pitch);
+	font->OverlayText(image, width, height,
+					str_temp, 5, 120, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	sprintf(str_temp, "roll: %.3f", imu_data.pitch);
+	font->OverlayText(image, width, height,
+					str_temp, 5, 160, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	sprintf(str_temp, "log: %.3f", imu_data.longitude);
+	font->OverlayText(image, width, height,
+					str_temp, 5, 200, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	sprintf(str_temp, "lat: %.3f", imu_data.latitude);
+	font->OverlayText(image, width, height,
+					str_temp, 5, 240, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	sprintf(str_temp, "hgt: %.3f", imu_data.height);
+	font->OverlayText(image, width, height,
+					str_temp, 5, 280, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);										
+
+	str_time = str_temp;
+
+	if( font != NULL )
+	{
+		char str[256];
+		sprintf(str, "mj no net test");
+		font->OverlayText(image, width, height,
+						str, 5, 5, make_float4(255, 255, 255, 255), make_float4(0, 0, 0, 100));
+
+	}
+	return 0;
+
+}

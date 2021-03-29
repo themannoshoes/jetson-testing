@@ -1,8 +1,5 @@
-#include <stdio.h>
 #include "mj-draw.h"
-#include <jetson-utils/cudaUtility.h>
-#include <jetson-utils/cudaVector.h>
-#include <math.h>
+
 
 
 int min_of_them(int a, int b){
@@ -27,7 +24,7 @@ __global__ void gpuBlendBOx( uchar3* input, uchar3* output, int imgWidth, int im
 	color_temp.x = 0;
 	color_temp.y = 0;
 	color_temp.z = 200;
-	color_temp.w = 125;
+	color_temp.w = 0;
 
 	color_temp1.x = 200;
 	color_temp1.y = 0;
@@ -248,6 +245,8 @@ __global__ void gpuDrawCross_mj (uchar3 * img, int width, int height, int crossL
 }
 
 
+
+
 /************
 *
 *	call
@@ -318,3 +317,4 @@ void mj_drawBlend_test(uchar3 * img, int width, int height, int thickness)
  	gpuBlendBOx<<<gridDim, blockDim>>>(img, img, width, height);
 
 }
+
