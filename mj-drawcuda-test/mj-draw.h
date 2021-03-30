@@ -29,7 +29,7 @@ typedef struct _imu_base_info_t{
 
 typedef struct _tele_cam_base_info_t{
 
-	int zomm;
+	int zoom;
 	int memory_left;
 	int pics_amount;
 	int pics_num_already_sync;
@@ -56,6 +56,7 @@ void mj_draw_test_pos(uchar3* img, int width, int height, int cross_len, int thi
 void mj_drawBox_test(uchar3* img, int width, int height, int box_w, int box_h, int thickness);
 void mj_drawCircle_test(uchar3 * img, int width, int height, int radius, int thickness);
 void mj_drawBlend_test(uchar3 * img, int width, int height, int thickness);
+void mj_draw_SolidCircle_test(uchar3 * img, int width, int height, int radius, int2 center_pos);
 
 int mj_text_app(uchar3 * image, int width, int height);
 #endif

@@ -134,8 +134,8 @@ int main( int argc, char** argv )
 	// }
 
 	static uint log_flag = 1;
-	const int height_restrict = 1080;
-	const int width_restrict = 1920;
+	const int height_restrict = 720;
+	const int width_restrict = 1280;
 	/*
 	 * processing loop
 	 */
@@ -182,11 +182,11 @@ int main( int argc, char** argv )
 		// }
 		mj_text_app(image, width_restrict, height_restrict);
 
-     	mj_drawBlend_test(image, width_restrict, height_restrict, 3);
+     	// mj_drawBlend_test(image, width_restrict, height_restrict, 3);
 		mj_drawCircle_test(image, width_restrict, height_restrict, 100, 3);
 		mj_drawBox_test(image, width_restrict, height_restrict, width_restrict/ 2,height_restrict /2, 3);
 		mj_draw_test(image, width_restrict, height_restrict, height_restrict /4, 4);
-		//CUDA(cudaDeviceSynchronize());
+
 		// render outputs
 		if( output != NULL )
 		{
@@ -220,6 +220,7 @@ int main( int argc, char** argv )
 	return 0;
 }
 
+float4 cudaFont::first_string_pos;
 int mj_text_app(uchar3 * image, int width, int height)
 {
 	
@@ -227,13 +228,17 @@ int mj_text_app(uchar3 * image, int width, int height)
 	tele_cam_info_t  cam_data;
 	stream_info_t    stream_data;
 	g_distance_info_t g_distance_data;
+	std::string temp_str_c;
+	temp_str_c = "H.265";
 
 	cudaFont* font = cudaFont::Create();
+	if( font == NULL)return 0;
 	if( !font )
 	{
 		LogError("imagenet:  failed to load font for overlay\n");
 		return 0;
 	}
+	
 
     imu_data.year = 2020;
 	imu_data.month = 3;
@@ -241,48 +246,75 @@ int mj_text_app(uchar3 * image, int width, int height)
 	imu_data.hour  = 13;
 	imu_data.minute = 54;
 	imu_data.second = 45;
-	imu_data.yaw  = 1234.2344;
-	imu_data.roll = 987654321.4556;
-	imu_data.pitch  = 123459876.7648;
+	imu_data.yaw  = 359.123;
+	imu_data.roll = 11.123;
+	imu_data.pitch  = 22.123;
 	imu_data.longitude = 125.3;
 	imu_data.latitude  = 34.7;
 	imu_data.height    = 14000;
 
+	cam_data.zoom = 4;
+	cam_data.memory_left = 1024;
+	cam_data.pics_amount = 8;
+	cam_data.pics_num_already_sync = 6;
+
+	stream_data.width = 1920;
+	stream_data.height = 1080;
+	stream_data.frame_rate = 30;
+	stream_data.code_type = temp_str_c;
+	stream_data.bps = 1;
+
 	char str_temp[256];
-	
-	std::string str_time;
+	char str_temp1[50];
+
+	//imu_info
 	sprintf(str_temp, "%d-%d-%d %d:%d:%d", imu_data.year, imu_data.month, imu_data.date, imu_data.hour, imu_data.minute, imu_data.second);
-	font->OverlayText(image, width, height,
-					str_temp, width - 300, 40, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, 5, 5, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),3);
 	sprintf(str_temp, "yaw: %.3f", imu_data.yaw);
-	font->OverlayText(image, width, height,
-					str_temp, 5, 80, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, width, 5, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
 	sprintf(str_temp, "pitch: %.3f", imu_data.pitch);
-	font->OverlayText(image, width, height,
-					str_temp, 5, 120, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-	sprintf(str_temp, "roll: %.3f", imu_data.pitch);
-	font->OverlayText(image, width, height,
-					str_temp, 5, 160, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, width, 45, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	sprintf(str_temp, "roll: %.3f", imu_data.roll);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, width, 85, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
 	sprintf(str_temp, "log: %.3f", imu_data.longitude);
-	font->OverlayText(image, width, height,
-					str_temp, 5, 200, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, width, 125, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
 	sprintf(str_temp, "lat: %.3f", imu_data.latitude);
-	font->OverlayText(image, width, height,
-					str_temp, 5, 240, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, width, 165, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
 	sprintf(str_temp, "hgt: %.3f", imu_data.height);
-	font->OverlayText(image, width, height,
-					str_temp, 5, 280, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);										
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, width, 205, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);	
+	
+	//cam info
+	sprintf(str_temp, "cam zoom: %d", cam_data.zoom);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, 5, 45, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	sprintf(str_temp, "memory left: %d", cam_data.memory_left);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, 5, 85, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	sprintf(str_temp, "cam pics num: %d", cam_data.pics_amount);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, 5, 125, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	sprintf(str_temp, "cam pics sync: %d", cam_data.pics_num_already_sync);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, 5, 165, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
 
-	str_time = str_temp;
-
-	if( font != NULL )
-	{
-		char str[256];
-		sprintf(str, "mj no net test");
-		font->OverlayText(image, width, height,
-						str, 5, 5, make_float4(255, 255, 255, 255), make_float4(0, 0, 0, 100));
-
+	//stream show
+	for(int i = 0;i < stream_data.code_type.length();i++){
+		if(stream_data.code_type.length() > 49) return 0;
+		str_temp1[i] = stream_data.code_type[i];
 	}
+	sprintf(str_temp, "%dx%d@%dfps/%s/%dMbps", stream_data.width, stream_data.height, stream_data.frame_rate, str_temp1, stream_data.bps);
+	font->OverlayText_edge_alig(image, width, height,
+					str_temp, width, height -30 , make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 50),0);
+	float4 temp_rect_pos = font->first_string_pos; 
+	mj_draw_SolidCircle_test(image, width, height, 10, make_int2(temp_rect_pos.x - 15 -3 ,(temp_rect_pos.y + temp_rect_pos.w)/2) );
+
 	return 0;
 
 }

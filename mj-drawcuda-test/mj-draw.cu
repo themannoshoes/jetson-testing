@@ -107,6 +107,35 @@ __global__ void gpuDrawCircle(uchar3 * img, int width, int height, int radius, i
 	}
 
 }
+__global__ void gpuDrawSolidCircle_pos(uchar3 * img, int width, int height, int radius, int2 center_pos, uchar3 color)
+{
+	uchar3 pixel_temp;
+	pixel_temp = color;
+
+    int box_x = blockIdx.x * blockDim.x + threadIdx.x;
+	int box_y = blockIdx.y * blockDim.y + threadIdx.y;
+
+	int img_x = center_pos.x - radius + box_x;
+	int img_y = center_pos.y - radius + box_y;
+
+	if(img_x >= width
+	|| img_y >= height){
+		return;
+	}
+
+	if(box_x >= (radius*2)
+	|| box_y >= (radius*2)){
+		return;
+	}
+
+	float result = (box_x - radius) * (box_x - radius);
+	result = result + (box_y - radius) * (box_y - radius);
+	
+	if( result - (float)radius*radius <= 0){
+		img[img_y * width + img_x] = pixel_temp;	
+	}
+
+}
 
 __global__ void gpuDrawBox(uchar3 * img, int width, int height, int box_width, int box_height, int thickness)
 {
@@ -318,3 +347,14 @@ void mj_drawBlend_test(uchar3 * img, int width, int height, int thickness)
 
 }
 
+void mj_draw_SolidCircle_test(uchar3 * img, int width, int height, int radius, int2 center_pos)
+{
+	uchar3 color_pixel;
+	color_pixel.x = 255;
+	color_pixel.y = 0;
+	color_pixel.z = 0;
+
+	dim3 blockDim(8,8);
+	dim3 gridDim(iDivUp(radius*2, blockDim.x), iDivUp(radius*2, blockDim.y));
+ 	gpuDrawSolidCircle_pos<<<gridDim, blockDim>>>(img, width, height, radius, center_pos, color_pixel);
+}
