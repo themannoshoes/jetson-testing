@@ -71,6 +71,41 @@ int usage()
 	return 0;
 }
 
+pthread_mutex_t timerMutex;
+#define TIMERDATA_IT_LOCK() pthread_mutex_lock(&timerMutex)
+#define TIMERDATA_IT_UNLOCK() pthread_mutex_unlock(&timerMutex)
+int blink_enable = 1;
+int blink_state = 1;
+
+void set_Timer(int seconds, int mseconds)
+{
+	struct timeval temp;
+
+	temp.tv_sec = seconds;
+	temp.tv_usec = mseconds * 1000;
+
+	select(0, NULL, NULL, NULL, &temp);
+	return;
+}
+
+//timer thread
+void *timer_subthread(void * arg)
+{
+	int count = 0;
+	int i = 0;
+	while(1){
+		set_Timer(0,500);
+		count++;
+		TIMERDATA_IT_LOCK();
+		if(blink_enable == 1){
+			blink_state = !blink_state;
+		}else{
+			blink_state = 1;
+		}
+		TIMERDATA_IT_UNLOCK();
+	}
+}
+
 int main( int argc, char** argv )
 {
 	/*
@@ -136,6 +171,11 @@ int main( int argc, char** argv )
 	static uint log_flag = 1;
 	const int height_restrict = 720;
 	const int width_restrict = 1280;
+
+	pthread_t tid;
+	pthread_mutex_init(&timerMutex, NULL);
+	pthread_create(&tid,NULL,timer_subthread,NULL);
+
 	/*
 	 * processing loop
 	 */
@@ -212,6 +252,7 @@ int main( int argc, char** argv )
 	 */
 	LogVerbose("imagenet:  shutting down...\n");
 	
+	pthread_join(tid,NULL);
 	SAFE_DELETE(input);
 	SAFE_DELETE(output);
 	// SAFE_DELETE(net);
@@ -312,9 +353,11 @@ int mj_text_app(uchar3 * image, int width, int height)
 	sprintf(str_temp, "%dx%d@%dfps/%s/%dMbps", stream_data.width, stream_data.height, stream_data.frame_rate, str_temp1, stream_data.bps);
 	font->OverlayText_edge_alig(image, width, height,
 					str_temp, width, height -30 , make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 50),0);
-	float4 temp_rect_pos = font->first_string_pos; 
-	mj_draw_SolidCircle_test(image, width, height, 10, make_int2(temp_rect_pos.x - 15 -3 ,(temp_rect_pos.y + temp_rect_pos.w)/2) );
-
+	float4 temp_rect_pos = font->first_string_pos;
+	if(blink_state == 1){
+		mj_draw_SolidCircle_test(image, width, height, 10, make_int2(temp_rect_pos.x - 15 -3 ,(temp_rect_pos.y + temp_rect_pos.w)/2) );
+	}
+   	SAFE_DELETE(font);
 	return 0;
 
 }
