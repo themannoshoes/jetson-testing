@@ -31,6 +31,10 @@
 
 #include "mj-draw.h"
 
+#include <ros/ros.h>
+#include <turtlesim/Pose.h>
+#include <geometry_msgs/Twist.h>
+
 #ifdef HEADLESS
 	#define IS_HEADLESS() "headless"	// run without display
 #else
@@ -106,6 +110,19 @@ void *timer_subthread(void * arg)
 	}
 }
 
+void poseCallback(const turtlesim:: Pose:: ConstPtr& msg)
+{
+	static int log_cnt = 0;
+	if(log_cnt > 10){
+		log_cnt = 0;
+		ROS_INFO("Turtle pose: x: %0.6f, y: %0.6f", msg->x, msg->y);
+	}
+	log_cnt++;
+}
+
+
+
+
 int main( int argc, char** argv )
 {
 	/*
@@ -172,10 +189,34 @@ int main( int argc, char** argv )
 	const int height_restrict = 720;
 	const int width_restrict = 1280;
 
+
 	pthread_t tid;
 	pthread_mutex_init(&timerMutex, NULL);
 	pthread_create(&tid,NULL,timer_subthread,NULL);
 
+
+	//init the node
+	// ros_node_init();
+    int f_argc = 1;
+	char **f_argv;
+    char *f_cmd[2];
+	char f_cmd1[30]= "ABIBA";
+    char f_cmd2[30]= "/dev/video1";
+    
+    f_argv = f_cmd;
+    
+	f_argv[0] = f_cmd1;
+    // f_argv[1] = f_cmd2;
+    int i;
+    for(i = 0;i< f_argc;i++){
+        ROS_INFO("imagenet argc:%d : %s", i, f_argv[i]); 
+    }
+
+    ros::init(f_argc, f_argv, "imaghhh");
+
+    ros:: NodeHandle n;
+
+    ros::Subscriber pose_sub = n.subscribe("turtle1/pose", 10, poseCallback);
 	/*
 	 * processing loop
 	 */
@@ -244,6 +285,7 @@ int main( int argc, char** argv )
 
 		// // print out timing info
 		// net->PrintProfilerTimes();
+		ros::spinOnce();
 	}
 	
 	
@@ -251,8 +293,14 @@ int main( int argc, char** argv )
 	 * destroy resources
 	 */
 	LogVerbose("imagenet:  shutting down...\n");
-	
-	pthread_join(tid,NULL);
+	int err_thread;
+	pthread_cancel(tid);
+	err_thread =  pthread_join(tid,NULL);
+	if(err_thread){
+		LogError("imagenet:  cannot thread join\n");
+	}
+
+	LogVerbose("imagenet:  freeing memory.\n");
 	SAFE_DELETE(input);
 	SAFE_DELETE(output);
 	// SAFE_DELETE(net);
