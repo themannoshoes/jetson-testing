@@ -1,0 +1,1 @@
+uint32 zoom_pos

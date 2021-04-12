@@ -77,8 +77,16 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 
-add_message_files(FILES Person.msg)
+add_message_files(FILES Person.msg 
+global_pos.msg
+imu_att.msg
+tele_cam_zoom.msg
+utc_time.msg
+video_cam.msg
+tele_cam_info.msg)
 generate_messages(DEPENDENCIES std_msgs)
+
+
 
 
 ################################################
@@ -162,6 +170,10 @@ target_link_libraries(velocity_publisher ${catkin_LIBRARIES})
 
 add_executable(pose_subscriber src/pose_subscriber.cpp)
 target_link_libraries(pose_subscriber ${catkin_LIBRARIES})
+
+add_executable(global_pos_publish src/global_pos_publish.cpp)
+target_link_libraries(global_pos_publish ${catkin_LIBRARIES})
+add_dependencies(global_pos_publish ${PROJECT_NAME}_generate_messages_cpp)
 
 add_executable(person_subscriber src/person_subscriber.cpp)
 target_link_libraries(person_subscriber ${catkin_LIBRARIES})
