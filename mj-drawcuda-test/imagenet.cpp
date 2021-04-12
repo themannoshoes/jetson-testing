@@ -34,6 +34,13 @@
 #include <ros/ros.h>
 #include <turtlesim/Pose.h>
 #include <geometry_msgs/Twist.h>
+#include "Person.h"
+#include "global_pos.h"
+#include "imu_att.h"
+#include "tele_cam_zoom.h"
+#include "tele_cam_info.h"
+#include "utc_time.h"
+#include "video_cam.h"
 
 #ifdef HEADLESS
 	#define IS_HEADLESS() "headless"	// run without display
@@ -120,6 +127,17 @@ void poseCallback(const turtlesim:: Pose:: ConstPtr& msg)
 	log_cnt++;
 }
 
+void global_pos_Callback(const learning_topic::global_pos::ConstPtr& msg)
+{
+	static int log_cnt = 0;
+	if(log_cnt > 2){
+		log_cnt = 0;
+		 ROS_INFO("global_pos: lat: %0.4f, lon: %0.4f, vel[0]: %0.4f,vel[1]: %0.4f, vel[2]: %0.4f, att[0]: %0.4f, att[1]:%0.4f, att[2]:%0.4f",
+		                                 msg->latitude, msg->longitude,
+		                                   msg->vel[0],msg->vel[1],msg->vel[2], msg->att[0],msg->att[1],msg->att[2]);
+	}
+	log_cnt++;
+}
 
 
 
@@ -216,7 +234,7 @@ int main( int argc, char** argv )
 
     ros:: NodeHandle n;
 
-    ros::Subscriber pose_sub = n.subscribe("turtle1/pose", 10, poseCallback);
+    ros::Subscriber pose_sub = n.subscribe("/globall_balabala", 10, global_pos_Callback);
 	/*
 	 * processing loop
 	 */
