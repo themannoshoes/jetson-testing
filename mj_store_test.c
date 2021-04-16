@@ -1,49 +1,7 @@
 #include "mj_store_test.h"
 
-#define BUFFER_HEAD_ADDR 0xC0000000
-#define BUFFER_END_ADDR  0xC0800000
 
-
-#define FRAME_BUF_SIZE  250
-
-typedef enum _STORE_DATA_TYPE_ID{
-    ST_ID_UINT8,
-    ST_ID_UINT16,
-    ST_ID_UINT32,
-    ST_ID_UINT64,
-    ST_ID_INT8,
-    ST_ID_INT16,
-    ST_ID_INT32,
-    ST_ID_INT64,
-    ST_ID_FLOAT,
-    ST_ID_DOUBLE
-}S_TYPE_ID;
-
-typedef struct _data_information{
-    uint16_t   data_name_id;
-    S_TYPE_ID  data_type_id;
-    uint8_t    data_size;
-    int8_t  _8_;
-    int16_t _16_;
-    int32_t _32_;
-    int64_t _64_;
-    float    _f_;
-    double   _db_;
-    
-}data_info;
-
-typedef struct _store_structure{
-    uint8_t * current_write_cursor;    //the current buffer we can write
-    uint8_t * current_read_cursor;  //the reading cursor when we read out data of store_memory, it point to the current buffer we haven't read data out yet
-    uint8_t * store_mem_head_p; //the head pointer, it point to the head buffer that store the first data
-    uint8_t * store_mem_tail_p; //the tail pointer, it point to the tail buffer that store the last data
-    uint8_t * unit_table;
- 
-    uint16_t data_num_in_unit;    //the num of an unit data in memory
-    uint16_t unit_data_dim;      //the dimension of an unit data in memory
-    uint8_t start_flag;
-}store_type;
-
+#define GET_DATA_FROM_BUF(data,src_buf,flag)  convert_the_data_endian((uint8_t *)&data, (uint8_t*)src_buf, sizeof(data), flag)
 
 
 store_type store_util;
@@ -80,8 +38,9 @@ uint8_t get_size_of_datatype(S_TYPE_ID datatype_id)
 /* run this function will only stroe one pack of data in the table
 
 */
-void init_store_sturcture(store_type * store_p){
-    store_p->start_flag = 0;
+void init_store_sturcture(store_type * store_p)
+{
+
     store_p->current_read_cursor  = (uint8_t *)BUFFER_HEAD_ADDR;
     store_p->current_write_cursor = (uint8_t *)BUFFER_HEAD_ADDR;
     store_p->store_mem_head_p = (uint8_t *)BUFFER_HEAD_ADDR;
@@ -89,8 +48,14 @@ void init_store_sturcture(store_type * store_p){
  
     store_p->data_num_in_unit = 0;
     store_p->unit_data_dim    = 0;
+    store_p->start_flag = 0;
 }
-
+/*
+description: due to the data serial number in table,we get the name id ,then sample a specified data, and then store it in "one_data"
+para1:  table pointer
+para2:  data serial number in the table()
+para3:  a pointer to data buffer
+*/
 void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info * one_data)
 {
     uint16_t table_data_amount = *(__packed uint16_t *)(table_p);
@@ -124,7 +89,8 @@ void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info *
     }
 }
 
-uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_table){ //data_snum_in_table: start from zero
+uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_table) //data_snum_in_table: start from zero
+{ 
 
     data_info one_data;
     uint16_t count_up = 0;
@@ -159,20 +125,37 @@ uint16_t calculate_data_unit_dim(void * table_p)
     return temp_dim;
 }
 
-/* run this function:  we would store a unit data into memory, unit data is from realtime sampling*/
+uint16_t calculate_table_dim(uint8_t * table_p)
+{
+    uint16_t table_dim = 0;
+    uint16_t data_amount = 0;
+ 
+    data_amount = *(__packed uint16_t*)(table_p + 0);
+    table_dim = data_amount * sizeof(uint16_t) + 4;
+    return table_dim;
+}
+
+/* description:run this function, we would store a unit data into memory, unit data is from realtime sampling
+   para1: store_entity pointer
+   para2: a table pointer
+   para3: timestamp. it will be store with the data_unit
+*/
 void store_data_unit_in_mem(store_type * store_p, uint8_t * table_p, uint32_t timestamp) //para need: buffer pointer to store;  table pointer; 
 {
    uint8_t *buf_w_cursor = (uint8_t *)(store_p->current_write_cursor);
  
    uint16_t data_cur_snum = 0; //start from zero
+   uint16_t table_dim = 0;
    data_info one_data;
  
    if(store_p->start_flag == 0){
       store_p->start_flag = 1;
-      store_p->data_num_in_unit = *(__packed uint16_t *)table_p;
+      table_dim = calculate_table_dim(table_p);
+    
+      store_p->data_num_in_unit = *(__packed uint16_t *)(table_p + 0);
       store_p->unit_data_dim = calculate_data_unit_dim(table_p);
-      store_p->unit_table = malloc(store_p->data_num_in_unit * 2 + 4);
-      memmove((void *)store_p->unit_table, (void *)table_p, store_p->data_num_in_unit *2 + 4); 
+      store_p->unit_table = malloc(table_dim);
+      memmove((void *)store_p->unit_table, (void *)table_p, table_dim);
    }
    if( (uint8_t *)store_p->current_write_cursor + store_p->unit_data_dim + 4 > store_p->store_mem_tail_p + 1){
        return;
@@ -241,7 +224,7 @@ void pack_most_data_in_a_frame(store_type * store_p, packer_t * gp_packer, uint3
     gp_packer->_tx_sub_id     = AIRSHIP_FLY_CTL_BOARD_ID;
     gp_packer->_rx_id         = AIRSHIP_GCS_ID;
     gp_packer->_rx_sub_id     = AIRSHIP_FLY_CTL_BOARD_ID;
-    gp_packer->_frm_type      = AIRSHIP_FRAME_TYPE_STORE_TABLE_TESTING;
+    gp_packer->_frm_type      = 0x00;   //not define yet
 
     packer_run(gp_packer, gp_packer->_data._base, data_size_in_a_frm, NULL);
 }
@@ -301,9 +284,9 @@ void test_store_code(uint32_t timestamp)
  
     *(__packed uint16_t *)(table_p + 0) = 3; //total num
     *(__packed uint16_t *)(table_p + 2) = 1; //version id
-    *(__packed uint16_t *)(table_p + 4) = 0;
-    *(__packed uint16_t *)(table_p + 6) = 1;
-    *(__packed uint16_t *)(table_p + 8) = 2;
+    *(__packed uint16_t *)(table_p + 4) = 0; //data id 
+    *(__packed uint16_t *)(table_p + 6) = 1; //data id
+    *(__packed uint16_t *)(table_p + 8) = 2; //data id
 
     init_store_sturcture(&store_entity);
 
@@ -315,5 +298,75 @@ void test_store_code(uint32_t timestamp)
     for(uint8_t i = 0;i < 3; i++){
         seek_one_data_in_store_test(table_p, store_entity.current_read_cursor, i, &temp_one_data[i]);
     }
+
+}
+
+
+
+
+/*
+return value: 1 means this is big endian, 0 means this is small endian
+*/
+uint8_t check_system_endian()
+{
+    uint16_t test_num = 0x1798;
+    uint8_t* p_num = (uint8_t *)&test_num;
+ 
+    if(*p_num == 0x17
+    && *(p_num + 1) == 0x98){
+        return 0; //small endian
+    }else if(*p_num == 0x98
+    && *(p_num + 1) == 0x17){
+        return 1; //big endian
+    }else{
+        return 2; //we don't know what it is
+    }
+}
+/*para4: 1 means raw copy, without convert */
+void convert_the_data_endian( uint8_t * dst_pointer, uint8_t *src_pointer, uint8_t datasize, uint8_t flag_endian)
+{
+    uint8_t i;
+    switch(flag_endian){
+        case 0:
+            for(i = 0;i < datasize; i++){
+                    memmove( dst_pointer + i , src_pointer + datasize-1 -i,1);
+            }
+        break;
+        case 1:
+            memmove(dst_pointer,src_pointer, datasize);
+        break;
+    }
+}
+
+float test_float = 123.586;
+uint32_t test_32 = 0x12345678;
+float temp_result = 0;
+uint32_t result_32 = 0;
+uint8_t flag_of_endian = 0;
+void test_endian_transf()
+{
+
+    uint8_t bucket[8];
+    uint8_t bucket_1[8];
+    uint8_t* buffer = &bucket[0];
+    uint8_t * buffer_1 = &bucket_1[0];
+ 
+    flag_of_endian = check_system_endian();
+
+    convert_the_data_endian(buffer, (uint8_t *)&test_float, 4,0);
+    
+    GET_DATA_FROM_BUF(temp_result, buffer, 0);
+ 
+    convert_the_data_endian(buffer, (uint8_t *)&test_32, 4,0);
+ 
+    GET_DATA_FROM_BUF(result_32, buffer, 0);
+}
+
+
+
+
+void assemble_a_data_from_buffer(uint8_t *buffer, uint8_t *result_p, uint8_t datasize)
+{
+    
 
 }
