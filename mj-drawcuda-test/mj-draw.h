@@ -58,5 +58,5 @@ void mj_drawCircle_test(uchar3 * img, int width, int height, int radius, int thi
 void mj_drawBlend_test(uchar3 * img, int width, int height, int thickness);
 void mj_draw_SolidCircle_test(uchar3 * img, int width, int height, int radius, int2 center_pos);
 
-int mj_text_app(uchar3 * image, int width, int height);
+int mj_text_app(cudaFont* font, uchar3 * image, int width, int height);
 #endif

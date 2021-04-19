@@ -213,8 +213,7 @@ int main( int argc, char** argv )
 	pthread_create(&tid,NULL,timer_subthread,NULL);
 
 
-	//init the node
-	// ros_node_init();
+	//init ros node
     int f_argc = 1;
 	char **f_argv;
     char *f_cmd[2];
@@ -235,6 +234,8 @@ int main( int argc, char** argv )
     ros:: NodeHandle n;
 
     ros::Subscriber pose_sub = n.subscribe("/globall_balabala", 10, global_pos_Callback);
+
+
 	/*
 	 * processing loop
 	 */
@@ -279,7 +280,7 @@ int main( int argc, char** argv )
 				
 			// }
 		// }
-		mj_text_app(image, width_restrict, height_restrict);
+		mj_text_app(font,image, width_restrict, height_restrict);
 
      	// mj_drawBlend_test(image, width_restrict, height_restrict, 3);
 		mj_drawCircle_test(image, width_restrict, height_restrict, 100, 3);
@@ -303,6 +304,7 @@ int main( int argc, char** argv )
 
 		// // print out timing info
 		// net->PrintProfilerTimes();
+		
 		ros::spinOnce();
 	}
 	
@@ -321,6 +323,7 @@ int main( int argc, char** argv )
 	LogVerbose("imagenet:  freeing memory.\n");
 	SAFE_DELETE(input);
 	SAFE_DELETE(output);
+	SAFE_DELETE(font);
 	// SAFE_DELETE(net);
 	
 	LogVerbose("imagenet:  shutdown complete.\n");
@@ -328,7 +331,7 @@ int main( int argc, char** argv )
 }
 
 float4 cudaFont::first_string_pos;
-int mj_text_app(uchar3 * image, int width, int height)
+int mj_text_app(cudaFont* font, uchar3 * image, int width, int height)
 {
 	
 	imu_info_t       imu_data;
@@ -337,15 +340,6 @@ int mj_text_app(uchar3 * image, int width, int height)
 	g_distance_info_t g_distance_data;
 	std::string temp_str_c;
 	temp_str_c = "H.265";
-
-	cudaFont* font = cudaFont::Create();
-	if( font == NULL)return 0;
-	if( !font )
-	{
-		LogError("imagenet:  failed to load font for overlay\n");
-		return 0;
-	}
-	
 
     imu_data.year = 2020;
 	imu_data.month = 3;
@@ -423,7 +417,7 @@ int mj_text_app(uchar3 * image, int width, int height)
 	if(blink_state == 1){
 		mj_draw_SolidCircle_test(image, width, height, 10, make_int2(temp_rect_pos.x - 15 -3 ,(temp_rect_pos.y + temp_rect_pos.w)/2) );
 	}
-   	SAFE_DELETE(font);
+
 	return 0;
 
 }
