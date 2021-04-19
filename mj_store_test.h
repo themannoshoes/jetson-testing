@@ -42,7 +42,7 @@ typedef struct _data_information{
 }data_info;
 
 typedef struct _store_structure{
-    uint8_t * current_write_cursor;    //the current buffer we can write
+    uint8_t * current_write_cursor;    //the current cursor we can write
     uint8_t * current_read_cursor;  //the reading cursor when we read out data of store_memory, it point to the current buffer we haven't read data out yet
     uint8_t * store_mem_head_p; //the head pointer, it point to the head buffer that store the first data
     uint8_t * store_mem_tail_p; //the tail pointer, it point to the tail buffer that store the last data
@@ -55,7 +55,10 @@ typedef struct _store_structure{
 
 
 
-void init_store_sturcture(store_type * store_p);
+
+
+
+void init_store_sturcture(store_type * store_p, uint8_t * buf_head_addr, uint8_t *buf_end_addr);
 void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info * one_data);
 uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_table);
 uint16_t calculate_data_unit_dim(void * table_p);

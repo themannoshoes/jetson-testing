@@ -6,6 +6,9 @@
 
 store_type store_util;
 data_info temp_one_data[3];
+float test_src_data2 = 0.6;
+uint8_t test_src_data1 = 23;
+int16_t test_src_data3 = -2;
 
 void sendout_table()
 {
@@ -17,7 +20,6 @@ void sendout_table()
 uint8_t get_size_of_datatype(S_TYPE_ID datatype_id)
 {
     switch(datatype_id){
-       default:
        case ST_ID_UINT8: //uint8_t 
        case ST_ID_INT8: //int8_t 
           return 1;
@@ -32,29 +34,33 @@ uint8_t get_size_of_datatype(S_TYPE_ID datatype_id)
        case ST_ID_INT64: //int64_t
        case ST_ID_DOUBLE: //double 
           return 8;
+       default:
+          return 0;
     }
 }
 
 /* run this function will only stroe one pack of data in the table
 
 */
-void init_store_sturcture(store_type * store_p)
+void init_store_sturcture(store_type * store_p, uint8_t * buf_head_addr, uint8_t *buf_end_addr)
 {
 
-    store_p->current_read_cursor  = (uint8_t *)BUFFER_HEAD_ADDR;
-    store_p->current_write_cursor = (uint8_t *)BUFFER_HEAD_ADDR;
-    store_p->store_mem_head_p = (uint8_t *)BUFFER_HEAD_ADDR;
-    store_p->store_mem_tail_p = (uint8_t *)BUFFER_END_ADDR;
+    store_p->current_read_cursor  = buf_head_addr;
+    store_p->current_write_cursor = buf_head_addr;
+    store_p->store_mem_head_p     = buf_head_addr;
+    store_p->store_mem_tail_p     = buf_end_addr;
  
     store_p->data_num_in_unit = 0;
+    store_p->unit_table = NULL;
     store_p->unit_data_dim    = 0;
     store_p->start_flag = 0;
 }
 /*
-description: due to the data serial number in table,we get the name id ,then sample a specified data, and then store it in "one_data"
-para1:  table pointer
-para2:  data serial number in the table()
-para3:  a pointer to data buffer
+    Description: 
+            due to the data serial number in table,we get the name id ,then sample a specified data, and then store it in "one_data"
+    para1:  table pointer
+    para2:  data serial number in the table
+    para3:  a pointer to data buffer
 */
 void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info * one_data)
 {
@@ -63,7 +69,7 @@ void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info *
  
     uint8_t * temp_table_cursor = NULL;
  
-    if(data_name_id_offset > (table_data_amount -1) * sizeof(uint16_t) + 4){
+    if(data_name_id_offset > (table_data_amount -1) * sizeof(uint16_t) + 4){ //the offset is exceed the table 
         return;
     }
     temp_table_cursor = table_p + data_name_id_offset;
@@ -72,17 +78,17 @@ void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info *
     switch(one_data->data_name_id){
         default:
         case 0:
-            one_data->_8_ = 255;
+            one_data->_8_ = test_src_data1;
             one_data->data_type_id = ST_ID_INT8;
             one_data->data_size = get_size_of_datatype(one_data->data_type_id);
         break;
         case 1:
-            one_data->_f_ = 0.6;
+            one_data->_f_ = test_src_data2;
             one_data->data_type_id = ST_ID_FLOAT;
             one_data->data_size = get_size_of_datatype(one_data->data_type_id);
         break;
         case 2:
-            one_data->_16_ = -2;
+            one_data->_16_ = test_src_data3;
             one_data->data_type_id = ST_ID_INT16;
             one_data->data_size = get_size_of_datatype(one_data->data_type_id);
         break;
@@ -90,7 +96,7 @@ void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info *
 }
 
 uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_table) //data_snum_in_table: start from zero
-{ 
+{
 
     data_info one_data;
     uint16_t count_up = 0;
@@ -135,29 +141,39 @@ uint16_t calculate_table_dim(uint8_t * table_p)
     return table_dim;
 }
 
-/* description:run this function, we would store a unit data into memory, unit data is from realtime sampling
+/* Description:
+          run this function, we would store a unit data into memory, unit data is from realtime sampling
    para1: store_entity pointer
-   para2: a table pointer
+   para2: a table pointer;
+          the data needed to be stored is indicated by this table
    para3: timestamp. it will be store with the data_unit
 */
-void store_data_unit_in_mem(store_type * store_p, uint8_t * table_p, uint32_t timestamp) //para need: buffer pointer to store;  table pointer; 
+void sample_n_store_data_unit_in_mem(store_type * store_p, uint8_t * table_p, uint32_t timestamp)
 {
    uint8_t *buf_w_cursor = (uint8_t *)(store_p->current_write_cursor);
  
-   uint16_t data_cur_snum = 0; //start from zero
+   uint16_t data_cur_snum = 0;
    uint16_t table_dim = 0;
    data_info one_data;
  
    if(store_p->start_flag == 0){
-      store_p->start_flag = 1;
+
       table_dim = calculate_table_dim(table_p);
-    
+      if(store_p->unit_table != NULL){
+          free((void *)store_p->unit_table);
+          store_p->unit_table = NULL;
+      }
+      store_p->start_flag = 1;    //set the start flag
       store_p->data_num_in_unit = *(__packed uint16_t *)(table_p + 0);
       store_p->unit_data_dim = calculate_data_unit_dim(table_p);
       store_p->unit_table = malloc(table_dim);
+      if(store_p == NULL){
+          return;
+      }
       memmove((void *)store_p->unit_table, (void *)table_p, table_dim);
    }
-   if( (uint8_t *)store_p->current_write_cursor + store_p->unit_data_dim + 4 > store_p->store_mem_tail_p + 1){
+   
+   if( (uint8_t *)store_p->current_write_cursor + store_p->unit_data_dim + 4 > store_p->store_mem_tail_p + 1){ //prevent overwrite
        return;
    }
    
@@ -169,30 +185,30 @@ void store_data_unit_in_mem(store_type * store_p, uint8_t * table_p, uint32_t ti
         case ST_ID_UINT8:
         case ST_ID_INT8:
             *(__packed uint8_t *)(buf_w_cursor) = one_data._8_;
-            buf_w_cursor = buf_w_cursor + 1;
+            buf_w_cursor = buf_w_cursor + sizeof(one_data._8_);
         break;
         case ST_ID_UINT16:
         case ST_ID_INT16:
             *(__packed uint16_t *)(buf_w_cursor)= one_data._16_;
-            buf_w_cursor = buf_w_cursor + 2;
+            buf_w_cursor = buf_w_cursor + sizeof(one_data._16_);
           break;
         case ST_ID_UINT32:
         case ST_ID_INT32:
             *(__packed uint32_t *)(buf_w_cursor) = one_data._32_;
-            buf_w_cursor = buf_w_cursor + 4;
+            buf_w_cursor = buf_w_cursor + sizeof(one_data._32_);
           break;
         case ST_ID_UINT64:
         case ST_ID_INT64:
             *(__packed uint64_t *)(buf_w_cursor) = one_data._64_;
-            buf_w_cursor = buf_w_cursor + 8;
+            buf_w_cursor = buf_w_cursor + sizeof(one_data._64_);
           break;
         case ST_ID_FLOAT:
             *(__packed float *)(buf_w_cursor) = one_data._f_;
-            buf_w_cursor = buf_w_cursor + 4;
+            buf_w_cursor = buf_w_cursor + sizeof(one_data._f_);
           break;
         case ST_ID_DOUBLE:
             *(__packed double *)(buf_w_cursor) = one_data._db_;
-            buf_w_cursor = buf_w_cursor + 8;
+            buf_w_cursor = buf_w_cursor + sizeof(one_data._db_);
         break;
        }
        data_cur_snum ++;
@@ -228,9 +244,22 @@ void pack_most_data_in_a_frame(store_type * store_p, packer_t * gp_packer, uint3
 
     packer_run(gp_packer, gp_packer->_data._base, data_size_in_a_frm, NULL);
 }
+/*
+Description:
+    run this function, we can get one data from one unit in the memory
+para1:  the table pointer
+para2:  the pointer to one unit
+para3:  the data serial number in the table
 
-void seek_one_data_in_store_test(uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint16_t data_snum_of_unit, data_info * one_data) //data_num_of_first_unit: start from zero
+return value: 
+*/
+int8_t seek_one_data_in_store_test(uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint16_t data_snum_of_unit, data_info * one_data)
 {
+    uint16_t data_amount = 0;
+    data_amount = *(uint16_t *)(table_p + 0);
+    if(data_snum_of_unit > data_amount - 1){
+        return -1; //error
+    }
     sample_one_data_by_table(table_p, data_snum_of_unit, one_data);
     
     uint16_t offset = get_data_offset_in_the_buffer(table_p, data_snum_of_unit);
@@ -262,6 +291,94 @@ void seek_one_data_in_store_test(uint8_t * table_p, uint8_t * head_cursor_to_one
     }
 }
 
+/*
+Description:
+    run this function, we can get one data from one unit in the memory
+para1:  the table pointer
+para2:  the pointer to one unit
+para3:  the data serial number in the table
+
+return value: if success, return the datasize that we 
+*/
+int8_t seek_one_data_in_store_N_copy_2_buf(uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint16_t data_snum_of_unit, uint8_t * buffer_pnter)
+{
+    uint16_t data_amount = 0;
+    data_info one_data_bucket;
+    data_amount = *(uint16_t *)(table_p + 0);
+    if(data_snum_of_unit > data_amount - 1){
+        return -1; //error
+    }
+    sample_one_data_by_table(table_p, data_snum_of_unit, &one_data_bucket);
+    
+    uint16_t offset = get_data_offset_in_the_buffer(table_p, data_snum_of_unit);
+
+    switch(one_data_bucket.data_type_id){
+        default:
+        case ST_ID_INT8:
+        case ST_ID_UINT8:
+            *(int8_t *)buffer_pnter = *(__packed int8_t *)(head_cursor_to_one_unit + offset);
+        break;
+        case ST_ID_UINT16:
+        case ST_ID_INT16:
+            *(int16_t *)buffer_pnter = *(__packed int16_t *)(head_cursor_to_one_unit + offset);
+        break;
+        case ST_ID_UINT32:
+        case ST_ID_INT32:
+            *(int32_t *)buffer_pnter = *(__packed int32_t *)(head_cursor_to_one_unit + offset);
+        break;
+        case ST_ID_UINT64:
+        case ST_ID_INT64:
+            *(int64_t *)buffer_pnter = *(__packed int64_t *)(head_cursor_to_one_unit + offset);
+        break;
+        case ST_ID_FLOAT:
+            *(float *)buffer_pnter = *(__packed float *)(head_cursor_to_one_unit + offset);
+        break;
+        case ST_ID_DOUBLE:
+            *(double *)buffer_pnter = *(__packed double *)(head_cursor_to_one_unit + offset);
+        break;
+    }
+    return one_data_bucket.data_size;
+}
+
+
+void seek_one_unit_data_in_store_test(store_type * store_p, uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint8_t * unit_buffer){
+    
+    //get every data into a buffer
+    data_info one_data_t;
+    uint16_t data_snum = 0;
+    int8_t ret_of_seek;
+ 
+    while(data_snum < store_p->data_num_in_unit){
+     
+        seek_one_data_in_store_test(table_p, head_cursor_to_one_unit, data_snum, &one_data_t);
+        seek_one_data_in_store_N_copy_2_buf(table_p, head_cursor_to_one_unit, data_snum, unit_buffer);
+     
+        switch(one_data_t.data_type_id){
+        case ST_ID_INT8:
+        case ST_ID_UINT8:
+
+        break;
+        case ST_ID_UINT16:
+        case ST_ID_INT16:
+             
+        break;
+        case ST_ID_UINT32:
+        case ST_ID_INT32:
+            
+        break;
+        case ST_ID_UINT64:
+        case ST_ID_INT64:
+            
+        break;
+        case ST_ID_FLOAT:
+            
+        break;
+        case ST_ID_DOUBLE:
+        break;
+        }
+        data_snum++;
+    }
+}
 void parse_data_in_frame_buf(void * table_p, uint8_t * frame_buf, uint8_t unit_amount){
    
     uint8_t i,j;
@@ -271,6 +388,13 @@ void parse_data_in_frame_buf(void * table_p, uint8_t * frame_buf, uint8_t unit_a
          for(j = 0; j< temp_unit_dim; j++){
              
          }
+    }
+}
+
+void delete_the_store_entity(store_type * store_p){
+    
+    if(store_p->unit_table != NULL){
+        free((void *)store_p->unit_table);
     }
 }
 
@@ -288,22 +412,29 @@ void test_store_code(uint32_t timestamp)
     *(__packed uint16_t *)(table_p + 6) = 1; //data id
     *(__packed uint16_t *)(table_p + 8) = 2; //data id
 
-    init_store_sturcture(&store_entity);
+    init_store_sturcture(&store_entity, (uint8_t *)BUFFER_HEAD_ADDR, (uint8_t *)BUFFER_END_ADDR);
 
     while(store_count > 0){
-        store_data_unit_in_mem(&store_entity, table_p, timestamp); 
+        test_src_data1--;
+        test_src_data2--;
+        test_src_data3--;
+        sample_n_store_data_unit_in_mem(&store_entity, table_p, timestamp); 
         store_count --;
     }
 
     for(uint8_t i = 0;i < 3; i++){
         seek_one_data_in_store_test(table_p, store_entity.current_read_cursor, i, &temp_one_data[i]);
     }
+    
+    free(table_p);
+    delete_the_store_entity(&store_entity);
+     
 
 }
 
 
 
-
+/******************************************************below is for simple endian ******************************************************/
 /*
 return value: 1 means this is big endian, 0 means this is small endian
 */
