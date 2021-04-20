@@ -5,7 +5,7 @@
 
 
 store_type store_util;
-data_info temp_one_data[3];
+data_info temp_one_data[3 * 4];
 float test_src_data2 = 0.6;
 uint8_t test_src_data1 = 23;
 int16_t test_src_data3 = -2;
@@ -94,8 +94,16 @@ void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info *
         break;
     }
 }
-
-uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_table) //data_snum_in_table: start from zero
+/*
+Description:
+    this function will return a offset 
+para1:
+para2:
+para3:  0: function will return an normal offset
+        1: function will return an offset that add the size of last data 
+return:  a offset of the data in the buffer
+*/
+uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_table, uint8_t type_ret)
 {
 
     data_info one_data;
@@ -112,9 +120,19 @@ uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_
         temp_size += one_data.data_size; 
         count_up ++;
     }
-    return temp_size - one_data.data_size;
+    if(type_ret == 0 ){
+        return temp_size - one_data.data_size;
+    }else{
+        return temp_size;
+    }
 }
 
+/*
+Description:
+  this function will return one data unit dimension that timestamp not included
+para1:
+return: the unit dimension that timestamp not included
+*/
 uint16_t calculate_data_unit_dim(void * table_p)
 {
     uint16_t data_cur_snum = 0;
@@ -157,13 +175,11 @@ void sample_n_store_data_unit_in_mem(store_type * store_p, uint8_t * table_p, ui
    data_info one_data;
  
    if(store_p->start_flag == 0){
-
       table_dim = calculate_table_dim(table_p);
       if(store_p->unit_table != NULL){
           free((void *)store_p->unit_table);
           store_p->unit_table = NULL;
       }
-      store_p->start_flag = 1;    //set the start flag
       store_p->data_num_in_unit = *(__packed uint16_t *)(table_p + 0);
       store_p->unit_data_dim = calculate_data_unit_dim(table_p);
       store_p->unit_table = malloc(table_dim);
@@ -171,6 +187,8 @@ void sample_n_store_data_unit_in_mem(store_type * store_p, uint8_t * table_p, ui
           return;
       }
       memmove((void *)store_p->unit_table, (void *)table_p, table_dim);
+      
+      store_p->start_flag = 1;    //when evrything init done, set the start flag
    }
    
    if( (uint8_t *)store_p->current_write_cursor + store_p->unit_data_dim + 4 > store_p->store_mem_tail_p + 1){ //prevent overwrite
@@ -247,138 +265,157 @@ void pack_most_data_in_a_frame(store_type * store_p, packer_t * gp_packer, uint3
 /*
 Description:
     run this function, we can get one data from one unit in the memory
-para1:  the table pointer
-para2:  the pointer to one unit
-para3:  the data serial number in the table
-
+para1
+para2:  the table pointer
+para3:  the pointer to one unit
+para4:  the data serial number in the table
+pata5(rw):  the pointer using to save one_data
 return value: 
 */
-int8_t seek_one_data_in_store_test(uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint16_t data_snum_of_unit, data_info * one_data)
+int8_t seek_one_data_in_store_test(store_type * store_p,uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint16_t data_snum_of_unit, data_info * one_data)
 {
     uint16_t data_amount = 0;
     data_amount = *(uint16_t *)(table_p + 0);
-    if(data_snum_of_unit > data_amount - 1){
+    uint16_t offset;
+
+    if(store_p->start_flag == 0){
+        return -1; //we didnot store anything
+    }
+    if(data_snum_of_unit < data_amount){
+
+        sample_one_data_by_table(table_p, data_snum_of_unit, one_data);
+        offset = get_data_offset_in_the_buffer(table_p, data_snum_of_unit,0);
+        switch(one_data->data_type_id){
+            default:
+            case ST_ID_INT8:
+            case ST_ID_UINT8:
+                one_data->_8_ = *(__packed int8_t *)(head_cursor_to_one_unit + offset);
+            break;
+            case ST_ID_UINT16:
+            case ST_ID_INT16:
+                one_data->_16_ = *(__packed int16_t *)(head_cursor_to_one_unit + offset);
+            break;
+            case ST_ID_UINT32:
+            case ST_ID_INT32:
+                one_data->_32_ = *(__packed int32_t *)(head_cursor_to_one_unit + offset);
+            break;
+            case ST_ID_UINT64:
+            case ST_ID_INT64:
+                one_data->_64_ = *(__packed int64_t *)(head_cursor_to_one_unit + offset);
+            break;
+            case ST_ID_FLOAT:
+                one_data->_f_ = *(__packed float *)(head_cursor_to_one_unit + offset);
+            break;
+            case ST_ID_DOUBLE:
+                one_data->_db_ = *(__packed double *)(head_cursor_to_one_unit + offset);
+            break;
+        }
+    }else if(data_snum_of_unit == data_amount){
+     
+        offset = get_data_offset_in_the_buffer(table_p, data_snum_of_unit-1,1);
+        one_data->data_name_id = 0;//fake, no use 
+        one_data->data_size    = sizeof(uint32_t);
+        one_data->data_type_id = ST_ID_UINT32;
+        one_data->_32_ = *(__packed int32_t *)(head_cursor_to_one_unit + offset);
+    }else{
         return -1; //error
     }
-    sample_one_data_by_table(table_p, data_snum_of_unit, one_data);
     
-    uint16_t offset = get_data_offset_in_the_buffer(table_p, data_snum_of_unit);
 
-    switch(one_data->data_type_id){
-        default:
-        case ST_ID_INT8:
-        case ST_ID_UINT8:
-            one_data->_8_ = *(__packed int8_t *)(head_cursor_to_one_unit + offset);
-        break;
-        case ST_ID_UINT16:
-        case ST_ID_INT16:
-            one_data->_16_ = *(__packed int16_t *)(head_cursor_to_one_unit + offset);
-        break;
-        case ST_ID_UINT32:
-        case ST_ID_INT32:
-            one_data->_32_ = *(__packed int32_t *)(head_cursor_to_one_unit + offset);
-        break;
-        case ST_ID_UINT64:
-        case ST_ID_INT64:
-            one_data->_64_ = *(__packed int64_t *)(head_cursor_to_one_unit + offset);
-        break;
-        case ST_ID_FLOAT:
-            one_data->_f_ = *(__packed float *)(head_cursor_to_one_unit + offset);
-        break;
-        case ST_ID_DOUBLE:
-            one_data->_db_ = *(__packed double *)(head_cursor_to_one_unit + offset);
-        break;
-    }
 }
 
 /*
 Description:
-    run this function, we can get one data from one unit in the memory
+    run this function, we can get one data(Or timestamp) from one unit in the memory
 para1:  the table pointer
 para2:  the pointer to one unit
 para3:  the data serial number in the table
 
-return value: if success, return the datasize that we 
+return value: if success, return the datasize that we seek
 */
-int8_t seek_one_data_in_store_N_copy_2_buf(uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint16_t data_snum_of_unit, uint8_t * buffer_pnter)
+int8_t seek_one_data_in_store_N_copy_2_buf(store_type * store_p,uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint16_t data_snum_of_unit, uint8_t * buffer_pnter)
 {
     uint16_t data_amount = 0;
     data_info one_data_bucket;
     data_amount = *(uint16_t *)(table_p + 0);
-    if(data_snum_of_unit > data_amount - 1){
+    uint16_t offset = 0;
+ 
+    if(store_p->start_flag == 0){
+        return -1; //we didnot store anything
+    }
+    if(data_snum_of_unit <  data_amount){
+        sample_one_data_by_table(table_p, data_snum_of_unit, &one_data_bucket);
+        offset = get_data_offset_in_the_buffer(table_p, data_snum_of_unit,0);
+        switch(one_data_bucket.data_type_id){
+            default:
+            case ST_ID_INT8:
+            case ST_ID_UINT8:
+                *(int8_t *)buffer_pnter = *(__packed int8_t *)(head_cursor_to_one_unit + offset);
+            break;
+            case ST_ID_UINT16:
+            case ST_ID_INT16:
+                *(int16_t *)buffer_pnter = *(__packed int16_t *)(head_cursor_to_one_unit + offset);
+            break;
+            case ST_ID_UINT32:
+            case ST_ID_INT32:
+                *(int32_t *)buffer_pnter = *(__packed int32_t *)(head_cursor_to_one_unit + offset);
+            break;
+            case ST_ID_UINT64:
+            case ST_ID_INT64:
+                *(int64_t *)buffer_pnter = *(__packed int64_t *)(head_cursor_to_one_unit + offset);
+            break;
+            case ST_ID_FLOAT:
+                *(float *)buffer_pnter = *(__packed float *)(head_cursor_to_one_unit + offset);
+            break;
+            case ST_ID_DOUBLE:
+                *(double *)buffer_pnter = *(__packed double *)(head_cursor_to_one_unit + offset);
+            break;
+        }
+        return one_data_bucket.data_size;
+    }else if(data_snum_of_unit == data_amount){ //in this case, we copy the timestamp into buffer
+        offset = get_data_offset_in_the_buffer(table_p, data_snum_of_unit -1,1);
+        *(uint32_t *)buffer_pnter = *(__packed uint32_t *)(head_cursor_to_one_unit + offset);
+        return sizeof(uint32_t);
+    }else{
         return -1; //error
     }
-    sample_one_data_by_table(table_p, data_snum_of_unit, &one_data_bucket);
-    
-    uint16_t offset = get_data_offset_in_the_buffer(table_p, data_snum_of_unit);
-
-    switch(one_data_bucket.data_type_id){
-        default:
-        case ST_ID_INT8:
-        case ST_ID_UINT8:
-            *(int8_t *)buffer_pnter = *(__packed int8_t *)(head_cursor_to_one_unit + offset);
-        break;
-        case ST_ID_UINT16:
-        case ST_ID_INT16:
-            *(int16_t *)buffer_pnter = *(__packed int16_t *)(head_cursor_to_one_unit + offset);
-        break;
-        case ST_ID_UINT32:
-        case ST_ID_INT32:
-            *(int32_t *)buffer_pnter = *(__packed int32_t *)(head_cursor_to_one_unit + offset);
-        break;
-        case ST_ID_UINT64:
-        case ST_ID_INT64:
-            *(int64_t *)buffer_pnter = *(__packed int64_t *)(head_cursor_to_one_unit + offset);
-        break;
-        case ST_ID_FLOAT:
-            *(float *)buffer_pnter = *(__packed float *)(head_cursor_to_one_unit + offset);
-        break;
-        case ST_ID_DOUBLE:
-            *(double *)buffer_pnter = *(__packed double *)(head_cursor_to_one_unit + offset);
-        break;
-    }
-    return one_data_bucket.data_size;
 }
 
-
-void seek_one_unit_data_in_store_test(store_type * store_p, uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint8_t * unit_buffer){
-    
+/*
+  Description:
+     in this function, we would store a unit data (timestamp included) into a buffer 
+  para1:
+  para2:
+  para3:
+  para4:
+  return: -1:error;
+*/
+int8_t seek_one_unit_data_in_store_test(store_type * store_p, uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint8_t * unit_buffer, uint16_t buffer_size)
+{
     //get every data into a buffer
-    data_info one_data_t;
     uint16_t data_snum = 0;
-    int8_t ret_of_seek;
- 
-    while(data_snum < store_p->data_num_in_unit){
-     
-        seek_one_data_in_store_test(table_p, head_cursor_to_one_unit, data_snum, &one_data_t);
-        seek_one_data_in_store_N_copy_2_buf(table_p, head_cursor_to_one_unit, data_snum, unit_buffer);
-     
-        switch(one_data_t.data_type_id){
-        case ST_ID_INT8:
-        case ST_ID_UINT8:
-
-        break;
-        case ST_ID_UINT16:
-        case ST_ID_INT16:
-             
-        break;
-        case ST_ID_UINT32:
-        case ST_ID_INT32:
-            
-        break;
-        case ST_ID_UINT64:
-        case ST_ID_INT64:
-            
-        break;
-        case ST_ID_FLOAT:
-            
-        break;
-        case ST_ID_DOUBLE:
-        break;
+    int8_t ret_num_of_seek;
+    uint16_t unit_buffer_cursor = 0;
+    uint16_t unit_dim;
+    
+    unit_dim = calculate_data_unit_dim(table_p);
+    unit_dim += 4; //add timestamp
+    if(unit_dim > buffer_size){
+        return -1;
+    }
+    
+    while(data_snum <= store_p->data_num_in_unit){
+        
+        ret_num_of_seek = seek_one_data_in_store_N_copy_2_buf(store_p ,table_p, head_cursor_to_one_unit, data_snum, unit_buffer + unit_buffer_cursor);
+        if(ret_num_of_seek == -1){
+            return -1;
         }
+        unit_buffer_cursor += ret_num_of_seek;
         data_snum++;
     }
+    return 0;
 }
+
 void parse_data_in_frame_buf(void * table_p, uint8_t * frame_buf, uint8_t unit_amount){
    
     uint8_t i,j;
@@ -403,7 +440,9 @@ void test_store_code(uint32_t timestamp)
     uint8_t store_count = 3;
     
     store_type store_entity;
-
+    uint8_t * temp_buffer;
+    uint16_t unit_N_tstamp_size;
+    
     uint8_t * table_p = malloc(4 + 3*sizeof(int16_t));;
  
     *(__packed uint16_t *)(table_p + 0) = 3; //total num
@@ -412,23 +451,36 @@ void test_store_code(uint32_t timestamp)
     *(__packed uint16_t *)(table_p + 6) = 1; //data id
     *(__packed uint16_t *)(table_p + 8) = 2; //data id
 
+    unit_N_tstamp_size = calculate_data_unit_dim(table_p);
+    unit_N_tstamp_size += 4;
+    temp_buffer  = malloc(3*unit_N_tstamp_size);
+ 
     init_store_sturcture(&store_entity, (uint8_t *)BUFFER_HEAD_ADDR, (uint8_t *)BUFFER_END_ADDR);
 
     while(store_count > 0){
+        sample_n_store_data_unit_in_mem(&store_entity, table_p, 0x3344); 
         test_src_data1--;
         test_src_data2--;
         test_src_data3--;
-        sample_n_store_data_unit_in_mem(&store_entity, table_p, timestamp); 
         store_count --;
     }
-
-    for(uint8_t i = 0;i < 3; i++){
-        seek_one_data_in_store_test(table_p, store_entity.current_read_cursor, i, &temp_one_data[i]);
-    }
     
+    for(uint8_t i = 0;i < 3;i++){
+            seek_one_unit_data_in_store_test(&store_entity, 
+                                             table_p,
+                                             store_entity.current_read_cursor +i*unit_N_tstamp_size,
+                                             temp_buffer + i* unit_N_tstamp_size,
+                                             unit_N_tstamp_size);
+    }
+    for(uint8_t j =0; j < 3; j++){
+        for(uint8_t i = 0;i < 4; i++){
+            seek_one_data_in_store_test(&store_entity,table_p, temp_buffer + j*unit_N_tstamp_size, i, &temp_one_data[i+j * 4]);
+        }
+    }
+
     free(table_p);
+    free(temp_buffer);
     delete_the_store_entity(&store_entity);
-     
 
 }
 

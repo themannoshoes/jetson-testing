@@ -60,7 +60,7 @@ typedef struct _store_structure{
 
 void init_store_sturcture(store_type * store_p, uint8_t * buf_head_addr, uint8_t *buf_end_addr);
 void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info * one_data);
-uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_table);
+uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_table, uint8_t type_ret);
 uint16_t calculate_data_unit_dim(void * table_p);
 uint16_t calculate_table_dim(uint8_t * table_p);
 
