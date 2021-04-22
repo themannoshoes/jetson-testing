@@ -1,4 +1,5 @@
 #include "mj_store_test.h"
+#include "use_a_prtcol_to_pack_store.h"
 
 
 #define GET_DATA_FROM_BUF(data,src_buf,flag)  convert_the_data_endian((uint8_t *)&data, (uint8_t*)src_buf, sizeof(data), flag)
@@ -9,6 +10,8 @@ data_info temp_one_data[3 * 4];
 float test_src_data2 = 0.6;
 uint8_t test_src_data1 = 23;
 int16_t test_src_data3 = -2;
+float test_src_data4 = 0.9;
+
 
 void sendout_table()
 {
@@ -91,6 +94,11 @@ void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info *
             one_data->_16_ = test_src_data3;
             one_data->data_type_id = ST_ID_INT16;
             one_data->data_size = get_size_of_datatype(one_data->data_type_id);
+        break;
+        case 3:
+            one_data->_f_ = test_src_data4;
+            one_data->data_type_id = ST_ID_FLOAT;
+            one_data->data_size = get_size_of_datatype(one_data->data_type_id);        
         break;
     }
 }
@@ -240,28 +248,7 @@ void sample_n_store_data_unit_in_mem(store_type * store_p, uint8_t * table_p, ui
    store_p->current_write_cursor = (void *)buf_w_cursor;
 }
 
-void pack_most_data_in_a_frame(store_type * store_p, packer_t * gp_packer, uint32_t timestamp){  //frame_buf is the data_pointer for a airship frame
- 
-    uint8_t * cur_r_cursor = store_p->current_read_cursor;
-    uint16_t data_unit_size = store_p->data_num_in_unit;
-    uint8_t how_many_unit_can_store = FRAME_BUF_SIZE / data_unit_size;
- 
-    uint16_t data_size_in_a_frm = how_many_unit_can_store * data_unit_size;
-    if(data_size_in_a_frm > FRAME_BUF_SIZE){
-        return;
-    }
 
-    //move data into frame buf 
-    memmove((void *)gp_packer->_data._base, (const void *)cur_r_cursor, data_size_in_a_frm);
-    gp_packer->_timestamp     = timestamp;
-    gp_packer->_tx_id         = AIRSHIP_SHIP_ID;
-    gp_packer->_tx_sub_id     = AIRSHIP_FLY_CTL_BOARD_ID;
-    gp_packer->_rx_id         = AIRSHIP_GCS_ID;
-    gp_packer->_rx_sub_id     = AIRSHIP_FLY_CTL_BOARD_ID;
-    gp_packer->_frm_type      = 0x00;   //not define yet
-
-    packer_run(gp_packer, gp_packer->_data._base, data_size_in_a_frm, NULL);
-}
 /*
 Description:
     run this function, we can get one data from one unit in the memory
@@ -320,7 +307,7 @@ int8_t seek_one_data_in_store_test(store_type * store_p,uint8_t * table_p, uint8
     }else{
         return -1; //error
     }
-    
+    return 0;
 
 }
 
@@ -387,7 +374,7 @@ int8_t seek_one_data_in_store_N_copy_2_buf(store_type * store_p,uint8_t * table_
   para1:
   para2:
   para3:
-  para4:
+  para4(w): "unit_buffer"  the buffer to save the data we get
   return: -1:error;
 */
 int8_t seek_one_unit_data_in_store_test(store_type * store_p, uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint8_t * unit_buffer, uint16_t buffer_size)
@@ -415,17 +402,60 @@ int8_t seek_one_unit_data_in_store_test(store_type * store_p, uint8_t * table_p,
     }
     return 0;
 }
-
-void parse_data_in_frame_buf(void * table_p, uint8_t * frame_buf, uint8_t unit_amount){
-   
-    uint8_t i,j;
-    uint16_t temp_unit_dim = calculate_data_unit_dim(table_p);
-    for(i = 0;i < unit_amount;i++){
-        
-         for(j = 0; j< temp_unit_dim; j++){
-             
-         }
+/*
+Description: 
+    get data units into buffer, as more as we can
+para1:
+para2:
+para3:
+para4(w):  "unit_buffer", the buffer that save the data we get
+return :   return the size that we get
+*/
+int32_t get_data_units_into_buffer(store_type * store_p, uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint8_t * unit_buffer, uint16_t buffer_size)
+{
+    uint8_t i;
+    int8_t ret = 0;
+    uint16_t how_many_units_can_pack = 0;
+    uint16_t dims_of_units = 0;
+    
+    dims_of_units = calculate_data_unit_dim(table_p);
+    dims_of_units +=4;
+    how_many_units_can_pack = buffer_size / dims_of_units;
+    if(how_many_units_can_pack == 0){
+        return -1; //error
     }
+    
+    for(i = 0;i < how_many_units_can_pack;i++){
+        ret = seek_one_unit_data_in_store_test(store_p, table_p, head_cursor_to_one_unit + i*dims_of_units, unit_buffer + i*dims_of_units, dims_of_units);
+        if(ret == -1)return -1;
+    }
+    return dims_of_units * how_many_units_can_pack;
+}
+
+/*
+Description:
+    pack the data in the store mem, as more as we can
+para1:
+para2:
+para3:
+return: 0 : OK
+*/
+int8_t pack_the_data_not_read(store_type * store_p, uint8_t * packer_buffer, uint16_t buffer_size)
+{
+    int32_t ret;
+    
+    if(store_p->start_flag == 0)return -1;
+ 
+    if(store_p->current_read_cursor + buffer_size > store_p->store_mem_tail_p
+    || store_p->current_read_cursor < store_p->store_mem_head_p
+    || store_p->current_read_cursor + buffer_size > store_p->current_write_cursor){
+        return -1; //error
+    }
+    ret = get_data_units_into_buffer(store_p, store_p->unit_table, store_p->current_read_cursor, packer_buffer, buffer_size);
+    if(ret == -1)return -1;//error
+ 
+    store_p->current_read_cursor = store_p->current_read_cursor + ret;
+    return 0;
 }
 
 void delete_the_store_entity(store_type * store_p){
@@ -435,6 +465,11 @@ void delete_the_store_entity(store_type * store_p){
     }
 }
 
+/****************************************************************************************/
+/*test code*/
+
+
+
 void test_store_code(uint32_t timestamp)
 {
     uint8_t store_count = 3;
@@ -443,13 +478,14 @@ void test_store_code(uint32_t timestamp)
     uint8_t * temp_buffer;
     uint16_t unit_N_tstamp_size;
     
-    uint8_t * table_p = malloc(4 + 3*sizeof(int16_t));;
+    uint8_t * table_p = malloc(4 + 4*sizeof(int16_t));;
  
-    *(__packed uint16_t *)(table_p + 0) = 3; //total num
+    *(__packed uint16_t *)(table_p + 0) = 4; //total num
     *(__packed uint16_t *)(table_p + 2) = 1; //version id
     *(__packed uint16_t *)(table_p + 4) = 0; //data id 
     *(__packed uint16_t *)(table_p + 6) = 1; //data id
     *(__packed uint16_t *)(table_p + 8) = 2; //data id
+    *(__packed uint16_t *)(table_p + 10) = 3; //data id
 
     unit_N_tstamp_size = calculate_data_unit_dim(table_p);
     unit_N_tstamp_size += 4;
@@ -462,20 +498,34 @@ void test_store_code(uint32_t timestamp)
         test_src_data1--;
         test_src_data2--;
         test_src_data3--;
+        test_src_data4--;
         store_count --;
     }
     
-    for(uint8_t i = 0;i < 3;i++){
-            seek_one_unit_data_in_store_test(&store_entity, 
-                                             table_p,
-                                             store_entity.current_read_cursor +i*unit_N_tstamp_size,
-                                             temp_buffer + i* unit_N_tstamp_size,
-                                             unit_N_tstamp_size);
-    }
-    for(uint8_t j =0; j < 3; j++){
-        for(uint8_t i = 0;i < 4; i++){
-            seek_one_data_in_store_test(&store_entity,table_p, temp_buffer + j*unit_N_tstamp_size, i, &temp_one_data[i+j * 4]);
-        }
+//    get_data_units_into_buffer(&store_entity, 
+//                                             table_p,
+//                                             store_entity.current_read_cursor,
+//                                             temp_buffer,
+//                                             3*unit_N_tstamp_size);
+    
+//    for(uint8_t j =0; j < 3; j++){
+//        for(uint8_t i = 0;i < 4; i++){
+//            seek_one_data_in_store_test(&store_entity,table_p, temp_buffer + j*unit_N_tstamp_size, i, &temp_one_data[i+j * 4]);
+//        }
+//    }
+
+    for(uint8_t i = 0;i < 2;i++){
+        g_packer._tx_id         = 0x99;
+        g_packer._tx_sub_id     = 0x01;
+        g_packer._rx_id         = 0x99;
+        g_packer._rx_sub_id     = 0x01;
+        g_packer._frm_type      = 0xaa;
+        pack_the_data_not_read(&store_entity, g_packer._data._base, 2*unit_N_tstamp_size);
+        packer_run(&g_packer, g_packer._data._base, 2*unit_N_tstamp_size, NULL);
+        packer_download_by_dlink1(&g_packer, NULL);
+        HAL_Delay(1000);
+        
+        test_parse_the_packer(g_packer._frame._base,g_packer._frame._size,&store_entity);
     }
 
     free(table_p);

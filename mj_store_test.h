@@ -56,6 +56,7 @@ typedef struct _store_structure{
 
 
 
+extern data_info temp_one_data[3 * 4];
 
 
 void init_store_sturcture(store_type * store_p, uint8_t * buf_head_addr, uint8_t *buf_end_addr);
@@ -63,8 +64,9 @@ void sample_one_data_by_table(uint8_t * table_p, uint16_t data_snum, data_info *
 uint16_t get_data_offset_in_the_buffer(uint8_t * table_p, uint16_t data_snum_in_table, uint8_t type_ret);
 uint16_t calculate_data_unit_dim(void * table_p);
 uint16_t calculate_table_dim(uint8_t * table_p);
+int8_t seek_one_data_in_store_test(store_type * store_p,uint8_t * table_p, uint8_t * head_cursor_to_one_unit, uint16_t data_snum_of_unit, data_info * one_data);
 
 void test_store_code(uint32_t timestamp);
-void test_endian_transf();
+void test_endian_transf(void);
 
 #endif
