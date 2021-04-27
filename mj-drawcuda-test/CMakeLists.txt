@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.0.2)
 
 file(GLOB imagenetSources *.cpp *.cu)
-file(GLOB imagenetIncludes *.h )
+file(GLOB imagenetIncludes *.h ./ros_msg_include/*.h)
 
 # declare my-recognition project
 project(imagenet)

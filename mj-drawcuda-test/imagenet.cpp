@@ -34,13 +34,13 @@
 #include <ros/ros.h>
 #include <turtlesim/Pose.h>
 #include <geometry_msgs/Twist.h>
-#include "Person.h"
-#include "global_pos.h"
-#include "imu_att.h"
-#include "tele_cam_zoom.h"
-#include "tele_cam_info.h"
-#include "utc_time.h"
-#include "video_cam.h"
+#include "ros_msg_include/global_pos.h"
+#include "ros_msg_include/imu_att.h"
+#include "ros_msg_include/tele_cam_zoom.h"
+#include "ros_msg_include/tele_cam_info.h"
+#include "ros_msg_include/utc_time.h"
+#include "ros_msg_include/video_cam.h"
+#include "ros_msg_include/osd_cmd.h"
 
 #ifdef HEADLESS
 	#define IS_HEADLESS() "headless"	// run without display
@@ -87,6 +87,7 @@ pthread_mutex_t timerMutex;
 #define TIMERDATA_IT_UNLOCK() pthread_mutex_unlock(&timerMutex)
 int blink_enable = 1;
 int blink_state = 1;
+float4 cudaFont::first_string_pos;
 
 void set_Timer(int seconds, int mseconds)
 {
@@ -117,28 +118,117 @@ void *timer_subthread(void * arg)
 	}
 }
 
-void poseCallback(const turtlesim:: Pose:: ConstPtr& msg)
+
+void ros_global_pos_Callback(const learning_topic::global_pos::ConstPtr& msg)
 {
-	static int log_cnt = 0;
-	if(log_cnt > 10){
-		log_cnt = 0;
-		ROS_INFO("Turtle pose: x: %0.6f, y: %0.6f", msg->x, msg->y);
-	}
-	log_cnt++;
+	// static int log_cnt = 0;
+	// if(log_cnt > 2){
+	// 	log_cnt = 0;
+	// 	 ROS_INFO("global_pos: lat: %0.4f, lon: %0.4f, vel[0]: %0.4f,vel[1]: %0.4f, vel[2]: %0.4f, att[0]: %0.4f, att[1]:%0.4f, att[2]:%0.4f",
+	// 	                                 msg->latitude, msg->longitude,
+	// 	                                   msg->vel[0],msg->vel[1],msg->vel[2], msg->att[0],msg->att[1],msg->att[2]);
+	// }
+	// log_cnt++;
+	imu_data.longitude = msg->longitude;
+	imu_data.latitude = msg->latitude;
 }
 
-void global_pos_Callback(const learning_topic::global_pos::ConstPtr& msg)
+void ros_imu_att_Callback(const learning_topic::imu_att::ConstPtr& msg)
 {
-	static int log_cnt = 0;
-	if(log_cnt > 2){
-		log_cnt = 0;
-		 ROS_INFO("global_pos: lat: %0.4f, lon: %0.4f, vel[0]: %0.4f,vel[1]: %0.4f, vel[2]: %0.4f, att[0]: %0.4f, att[1]:%0.4f, att[2]:%0.4f",
-		                                 msg->latitude, msg->longitude,
-		                                   msg->vel[0],msg->vel[1],msg->vel[2], msg->att[0],msg->att[1],msg->att[2]);
-	}
-	log_cnt++;
+	// static int log_cnt = 0;
+	// if(log_cnt > 2){
+	// 	log_cnt = 0;
+	// 	 ROS_INFO("imu_att: roll: %0.4f, pitch: %0.4f, yaw: %0.4f",
+	// 	                                 msg->roll, msg->pitch, msg->yaw);
+	// }
+	// log_cnt++;
+	imu_data.roll = msg->roll;
+	imu_data.pitch = msg->pitch;
+	imu_data.yaw = msg->yaw;
 }
 
+void ros_osd_cmd_Callback(const learning_topic::osd_cmd::ConstPtr& msg)
+{
+	// static int log_cnt = 0;
+	// if(log_cnt > 2){
+	// 	log_cnt = 0;
+	// 	for(int i = 0;i < msg->data.size(); i++){
+	// 			 ROS_INFO("osd_att: data[%d]: %d \r\n", i, msg->data[i]);	
+	// 	}
+	// }
+	// log_cnt++;
+	for(int i = 0;i < msg->data.size(); i++){
+		switch(i){
+		case 0:
+			osd_ctl_switch.cam_info_osd_switch = msg->data[0];
+			break;
+		case 1:
+		 	osd_ctl_switch.imu_data_osd_switch = msg->data[1];
+			break;
+		case 2:
+			osd_ctl_switch.stream_info_osd_switch = msg->data[2];
+			break;
+		case 3:
+			osd_ctl_switch.cross_display_osd_switch = msg->data[3];
+			break;
+		case 4:
+			osd_ctl_switch.telephoto_cam_view_box_osd_switch = msg->data[4];
+			break;
+		}	
+	}
+}
+void ros_tele_cam_info_Callback(const learning_topic::tele_cam_info::ConstPtr& msg)
+{
+	// static int log_cnt = 0;
+	// if(log_cnt > 2){
+	// 	log_cnt = 0;
+	// 	 ROS_INFO("tele_cam_info: space: %d, photo_captured: %d, photo_synced: %d",
+	// 	                                 msg->space, msg->photo_captured, msg->photo_synced);
+	// }
+	// log_cnt++;
+	cam_data.memory_left = msg->space;
+	cam_data.pics_captured_amount = msg->photo_captured;
+	cam_data.pics_num_already_sync = msg->photo_synced;
+}
+void ros_tele_cam_zoom_Callback(const learning_topic::tele_cam_zoom::ConstPtr& msg)
+{
+	// static int log_cnt = 0;
+	// if(log_cnt > 2){
+	// 	log_cnt = 0;
+	// 	 ROS_INFO("tele_cam_zoom: zoom_pos: %d", msg->zoom_pos);	
+	// }
+	// log_cnt++;
+	cam_data.zoom = msg->zoom_pos;
+}
+void ros_utc_time_Callback(const learning_topic::utc_time::ConstPtr& msg)
+{
+	// static int log_cnt = 0;
+	// if(log_cnt > 2){
+	// 	log_cnt = 0;
+	// 	 ROS_INFO("utc_time: year: %d, month: %d, day: %d, hour: %d, min: %d, sec: %d",
+	// 	                                msg->year, msg->month,
+	// 	                        		msg->day, msg->hour, msg->min, msg->sec);
+	// }
+	// log_cnt++;
+	imu_data.year  = msg->year;
+	imu_data.month = msg->month;
+	imu_data.date = msg->day;
+	imu_data.hour = msg->hour;
+	imu_data.minute = msg->min;
+	imu_data.second = msg->sec;
+}
+void ros_video_cam_Callback(const learning_topic::video_cam::ConstPtr& msg)
+{
+	// static int log_cnt = 0;
+	// if(log_cnt > 2){
+	// 	log_cnt = 0;
+	// 	 ROS_INFO("video_cam: zoom_pos: %d, tempature: %d, stabilize: %d, focus_mode: %d, defog: %d",
+	// 	                                msg->zoom_pos, msg->tempature,
+	// 	                                msg->stabilize, msg->focus_mode, msg->defog);
+	// }
+	// log_cnt++;
+	
+}
 
 
 int main( int argc, char** argv )
@@ -217,8 +307,8 @@ int main( int argc, char** argv )
     int f_argc = 1;
 	char **f_argv;
     char *f_cmd[2];
-	char f_cmd1[30]= "ABIBA";
-    char f_cmd2[30]= "/dev/video1";
+	char f_cmd1[30]= "fake_arg1";
+    char f_cmd2[30]= "fake_arg2";
     
     f_argv = f_cmd;
     
@@ -229,13 +319,19 @@ int main( int argc, char** argv )
         ROS_INFO("imagenet argc:%d : %s", i, f_argv[i]); 
     }
 
-    ros::init(f_argc, f_argv, "imaghhh");
+    ros::init(f_argc, f_argv, "video_viewer_osd");
 
     ros:: NodeHandle n;
 
-    ros::Subscriber pose_sub = n.subscribe("/globall_balabala", 10, global_pos_Callback);
+	ros::Subscriber global_pos_sub = n.subscribe("/gimbal/global_pos", 10, ros_global_pos_Callback);
+	ros::Subscriber imu_att_sub = n.subscribe("/gimbal/imu_att", 10, ros_imu_att_Callback);
+	ros::Subscriber osd_cmd_sub = n.subscribe("/gimbal/cmd_osd", 10, ros_osd_cmd_Callback);
+	ros::Subscriber tele_cam_info_sub = n.subscribe("/gimbal/tele_cam_info", 10, ros_tele_cam_info_Callback);
+	ros::Subscriber tele_cam_zoom_sub = n.subscribe("/gimbal/tele_cam_zoom", 10, ros_tele_cam_zoom_Callback);
+	ros::Subscriber utc_time_sub = n.subscribe("/gimbal/utc_time", 10, ros_utc_time_Callback);
+	ros::Subscriber video_cam_sub = n.subscribe("/gimbal/video_cam", 10, ros_video_cam_Callback);
 
-
+	init_ros_message_data();
 	/*
 	 * processing loop
 	 */
@@ -280,12 +376,17 @@ int main( int argc, char** argv )
 				
 			// }
 		// }
-		mj_text_app(font,image, width_restrict, height_restrict);
 
-     	// mj_drawBlend_test(image, width_restrict, height_restrict, 3);
-		mj_drawCircle_test(image, width_restrict, height_restrict, 100, 3);
-		mj_drawBox_test(image, width_restrict, height_restrict, width_restrict/ 2,height_restrict /2, 3);
-		mj_draw_test(image, width_restrict, height_restrict, height_restrict /4, 4);
+		app_text_overlay(font,image, width_restrict, height_restrict);
+
+     	// app_blend_on_img(image, width_restrict, height_restrict, 3);
+		// app_draw_circle_on_img(image, width_restrict, height_restrict, 100, 3);
+		if(osd_ctl_switch.telephoto_cam_view_box_osd_switch == 1){
+			app_draw_Box_on_img(image, width_restrict, height_restrict, width_restrict/ 2,height_restrict /2, 3);
+		}
+		if(osd_ctl_switch.cross_display_osd_switch == 1){
+			app_draw_cross_on_img(image, width_restrict, height_restrict, height_restrict /4, 4);
+		}
 
 		// render outputs
 		if( output != NULL )
@@ -330,94 +431,5 @@ int main( int argc, char** argv )
 	return 0;
 }
 
-float4 cudaFont::first_string_pos;
-int mj_text_app(cudaFont* font, uchar3 * image, int width, int height)
-{
-	
-	imu_info_t       imu_data;
-	tele_cam_info_t  cam_data;
-	stream_info_t    stream_data;
-	g_distance_info_t g_distance_data;
-	std::string temp_str_c;
-	temp_str_c = "H.265";
 
-    imu_data.year = 2020;
-	imu_data.month = 3;
-	imu_data.date  = 6;
-	imu_data.hour  = 13;
-	imu_data.minute = 54;
-	imu_data.second = 45;
-	imu_data.yaw  = 359.123;
-	imu_data.roll = 11.123;
-	imu_data.pitch  = 22.123;
-	imu_data.longitude = 125.3;
-	imu_data.latitude  = 34.7;
-	imu_data.height    = 14000;
 
-	cam_data.zoom = 4;
-	cam_data.memory_left = 1024;
-	cam_data.pics_amount = 8;
-	cam_data.pics_num_already_sync = 6;
-
-	stream_data.width = 1920;
-	stream_data.height = 1080;
-	stream_data.frame_rate = 30;
-	stream_data.code_type = temp_str_c;
-	stream_data.bps = 1;
-
-	char str_temp[256];
-	char str_temp1[50];
-
-	//imu_info
-	sprintf(str_temp, "%d-%d-%d %d:%d:%d", imu_data.year, imu_data.month, imu_data.date, imu_data.hour, imu_data.minute, imu_data.second);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, 5, 5, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),3);
-	sprintf(str_temp, "yaw: %.3f", imu_data.yaw);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, width, 5, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-	sprintf(str_temp, "pitch: %.3f", imu_data.pitch);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, width, 45, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-	sprintf(str_temp, "roll: %.3f", imu_data.roll);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, width, 85, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-	sprintf(str_temp, "log: %.3f", imu_data.longitude);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, width, 125, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-	sprintf(str_temp, "lat: %.3f", imu_data.latitude);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, width, 165, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-	sprintf(str_temp, "hgt: %.3f", imu_data.height);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, width, 205, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);	
-	
-	//cam info
-	sprintf(str_temp, "cam zoom: %d", cam_data.zoom);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, 5, 45, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-	sprintf(str_temp, "memory left: %d", cam_data.memory_left);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, 5, 85, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-	sprintf(str_temp, "cam pics num: %d", cam_data.pics_amount);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, 5, 125, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-	sprintf(str_temp, "cam pics sync: %d", cam_data.pics_num_already_sync);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, 5, 165, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-
-	//stream show
-	for(int i = 0;i < stream_data.code_type.length();i++){
-		if(stream_data.code_type.length() > 49) return 0;
-		str_temp1[i] = stream_data.code_type[i];
-	}
-	sprintf(str_temp, "%dx%d@%dfps/%s/%dMbps", stream_data.width, stream_data.height, stream_data.frame_rate, str_temp1, stream_data.bps);
-	font->OverlayText_edge_alig(image, width, height,
-					str_temp, width, height -30 , make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 50),0);
-	float4 temp_rect_pos = font->first_string_pos;
-	if(blink_state == 1){
-		mj_draw_SolidCircle_test(image, width, height, 10, make_int2(temp_rect_pos.x - 15 -3 ,(temp_rect_pos.y + temp_rect_pos.w)/2) );
-	}
-
-	return 0;
-
-}

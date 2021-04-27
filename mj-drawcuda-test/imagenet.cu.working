@@ -88,7 +88,7 @@ __global__ void gpudrawY_mj (uchar3 * img, int width, int height, int n)
 	}
 }
 
-void mj_draw_test(uchar3* img, int width, int height, int cross_len)
+void app_draw_cross_on_img(uchar3* img, int width, int height, int cross_len)
 {
 	if(cross_len > width
 	|| cross_len > height){
@@ -218,7 +218,7 @@ int main( int argc, char** argv )
 	CUDA(cudaOverlay(img_inA, dimsA, img_out, dimsA, 0, 0));
 	/** mj drawing test***/
 //	int cross_len = dimsA.x /2;
-    mj_draw_test(img_out, dimsA.x, dimsA.y, dimsA.y / 2);
+    app_draw_cross_on_img(img_out, dimsA.x, dimsA.y, dimsA.y / 2);
 
 	CUDA(cudaDeviceSynchronize());
 
@@ -264,7 +264,7 @@ int main( int argc, char** argv )
 		}
 
         CUDA(cudaDeviceSynchronize());
-//		mj_draw_test(image, input->GetWidth(), input->GetHeight(), input->GetHeight() / 2);
+//		app_draw_cross_on_img(image, input->GetWidth(), input->GetHeight(), input->GetHeight() / 2);
 
 
 		// render outputs

@@ -31,7 +31,7 @@ typedef struct _tele_cam_base_info_t{
 
 	int zoom;
 	int memory_left;
-	int pics_amount;
+	int pics_captured_amount;
 	int pics_num_already_sync;
 }tele_cam_info_t;
 
@@ -49,14 +49,30 @@ typedef struct _ground_distance_info_t{
 	float distance;
 }g_distance_info_t;
 
+typedef struct _osd_ctl_cmd_info_t{
+	uint8_t cam_info_osd_switch;
+	uint8_t imu_data_osd_switch;
+	uint8_t stream_info_osd_switch;
+	uint8_t cross_display_osd_switch;
+	uint8_t telephoto_cam_view_box_osd_switch;
 
+}osd_ctl_info_t;
 
-void mj_draw_test(uchar3* img, int width, int height, int cross_len,int thickness);
-void mj_draw_test_pos(uchar3* img, int width, int height, int cross_len, int thickness, int2 pos);
-void mj_drawBox_test(uchar3* img, int width, int height, int box_w, int box_h, int thickness);
-void mj_drawCircle_test(uchar3 * img, int width, int height, int radius, int thickness);
-void mj_drawBlend_test(uchar3 * img, int width, int height, int thickness);
-void mj_draw_SolidCircle_test(uchar3 * img, int width, int height, int radius, int2 center_pos);
+extern imu_info_t         imu_data;
+extern tele_cam_info_t    cam_data;
+extern stream_info_t      stream_data;
+extern g_distance_info_t  g_distance_data;
+extern osd_ctl_info_t     osd_ctl_switch;
+extern std::string        temp_str_c;
 
-int mj_text_app(cudaFont* font, uchar3 * image, int width, int height);
+void app_draw_cross_on_img(uchar3* img, int width, int height, int cross_len,int thickness);
+void app_draw_cross_on_img_pos(uchar3* img, int width, int height, int cross_len, int thickness, int2 pos);
+void app_draw_Box_on_img(uchar3* img, int width, int height, int box_w, int box_h, int thickness);
+void app_draw_circle_on_img(uchar3 * img, int width, int height, int radius, int thickness);
+void app_blend_on_img(uchar3 * img, int width, int height, int thickness);
+void app_draw_solidCircle_on_img(uchar3 * img, int width, int height, int radius, int2 center_pos);
+
+int app_text_overlay(cudaFont* font, uchar3 * image, int width, int height);
+
+void init_ros_message_data(void);
 #endif
