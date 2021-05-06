@@ -98,11 +98,7 @@ int main( int argc, char** argv )
 		return usage();
 
 
-	/*
-	 * attach signal handler
-	 */
-	if( signal(SIGINT, sig_handler) == SIG_ERR )
-		LogError("can't catch SIGINT\n");
+
 
 
 	/*
@@ -186,6 +182,12 @@ int main( int argc, char** argv )
 	ros::Subscriber tele_cam_zoom_sub = n.subscribe("/gimbal/tele_cam_zoom", 10, ros_tele_cam_zoom_Callback);
 	ros::Subscriber utc_time_sub = n.subscribe("/gimbal/utc_time", 10, ros_utc_time_Callback);
 	ros::Subscriber video_cam_sub = n.subscribe("/gimbal/video_cam", 10, ros_video_cam_Callback);
+
+	/*
+	 * attach signal handler
+	 */
+	if( signal(SIGINT, sig_handler) == SIG_ERR )
+		LogError("can't catch SIGINT\n");
 
 	init_ros_message_data();
 	/*
