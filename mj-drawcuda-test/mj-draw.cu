@@ -78,7 +78,9 @@ __global__ void gpuBlendBOx( uchar3* input, uchar3* output, int imgWidth, int im
 
 
 }
-
+/*
+description: draw a circle, the circle center is the img center
+*/
 __global__ void gpuDrawCircle(uchar3 * img, int width, int height, int radius, int thickness)
 {
 	uchar3 pixel_temp;
@@ -147,6 +149,10 @@ __global__ void gpuDrawSolidCircle_pos(uchar3 * img, int width, int height, int 
 
 }
 
+/*
+description: draw a box ,box center is the image center
+para1:
+*/
 __global__ void gpuDrawBox(uchar3 * img, int width, int height, int box_width, int box_height, int thickness)
 {
 	uchar3 pixel_temp;
@@ -240,6 +246,10 @@ __global__ void gpuDrawCross_pos (uchar3 * img, int width, int height, int cross
 	}
 }
 
+/*
+description: draw a cross, cross center is the img center
+para1:
+*/
 __global__ void gpuDrawCross_mj (uchar3 * img, int width, int height, int crossLen, int thickness)
 {
 	uchar3 pixel_temp;

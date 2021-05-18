@@ -11,6 +11,7 @@
 #include <string>
 #include <math.h>
 
+
 typedef struct _imu_base_info_t{
 	int year;
 	int month;
@@ -71,6 +72,10 @@ void app_draw_Box_on_img(uchar3* img, int width, int height, int box_w, int box_
 void app_draw_circle_on_img(uchar3 * img, int width, int height, int radius, int thickness);
 void app_blend_on_img(uchar3 * img, int width, int height, int thickness);
 void app_draw_solidCircle_on_img(uchar3 * img, int width, int height, int radius, int2 center_pos);
+
+void app_draw_level_ruler_on_img(uchar3* img, int width, int height, int ruler_len, int ruler_tooth_height, int thickness, int2 pos);
+void app_draw_vertical_ruler_on_img(uchar3* img, int width, int height, int ruler_len, int ruler_tooth_height, int thickness, int2 pos);
+void app_draw_a_line_on_img(uchar3* img, int width, int height, int thickness, int2 pos1, int2 pos2);
 
 int app_text_overlay(cudaFont* font, uchar3 * image, int width, int height);
 
