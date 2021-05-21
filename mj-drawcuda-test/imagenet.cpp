@@ -236,11 +236,12 @@ int main( int argc, char** argv )
 		// }
 
 		app_text_overlay(font,image, width_restrict, height_restrict);
-		app_draw_level_ruler_on_img(image, width_restrict, height_restrict, width_restrict/2, 12, 2, make_int2(30, height_restrict - 20));
-		app_draw_vertical_ruler_on_img(image, width_restrict, height_restrict, height_restrict/2, 12, 2, make_int2(width_restrict - 12 - 5, 30));
-		app_draw_a_line_on_img(image, width_restrict, height_restrict, 0, make_int2(310,0), make_int2(300,200));
+		// app_draw_level_ruler_on_img(image, width_restrict, height_restrict, width_restrict/2, 12, 1, make_int2(30, height_restrict - 20));
+		// app_draw_vertical_ruler_on_img(image, width_restrict, height_restrict, height_restrict/2, 12, 1, make_int2(width_restrict - 12 - 5, 30));
+		app_draw_a_line_on_img(image, width_restrict, height_restrict, 0, make_int2(300,5), make_int2(350,30));
 		app_draw_a_triangle_on_img(image, width_restrict, height_restrict, 0, make_int2(400,20), make_int2(400,120), make_int2(500,20));
-		draw_triangle_in_a_box(image, width_restrict, height_restrict, 0, 1, make_int2(600, 20), make_int2(610, 25));
+		app_draw_triangle_in_a_box(image, width_restrict, height_restrict, 0, 1, make_int2(600, 20), make_int2(605, 23));
+		app_draw_indicating_ruler_for_pitch_N_yaw(image, width_restrict, height_restrict , 1);
      	// app_blend_on_img(image, width_restrict, height_restrict, 3);
 		// app_draw_circle_on_img(image, width_restrict, height_restrict, 100, 3);
 		if(osd_ctl_switch.telephoto_cam_view_box_osd_switch == 1){

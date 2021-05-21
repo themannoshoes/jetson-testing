@@ -77,7 +77,8 @@ void app_draw_level_ruler_on_img(uchar3* img, int width, int height, int ruler_l
 void app_draw_vertical_ruler_on_img(uchar3* img, int width, int height, int ruler_len, int ruler_tooth_height, int thickness, int2 pos);
 void app_draw_a_line_on_img(uchar3* img, int width, int height, int thickness, int2 pos1, int2 pos2);
 void app_draw_a_triangle_on_img(uchar3* img, int width, int height, int thickness, int2 pos1, int2 pos2, int2 pos3);
-void draw_triangle_in_a_box(uchar3* img, int width, int height, int thickness, int orientate_flag, int2 pos1, int2 pos2);
+void app_draw_triangle_in_a_box(uchar3* img, int width, int height, int thickness, int orientate_flag, int2 pos1, int2 pos2);
+void app_draw_indicating_ruler_for_pitch_N_yaw(uchar3* img, int width, int height, int thickness);
 
 int app_text_overlay(cudaFont* font, uchar3 * image, int width, int height);
 

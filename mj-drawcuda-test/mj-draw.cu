@@ -413,29 +413,29 @@ int app_text_overlay(cudaFont* font, uchar3 * image, int width, int height)
 	char str_temp1[50];
 
 	//imu_info
-	if(osd_ctl_switch.imu_data_osd_switch == 1){
-		sprintf(str_temp, "%d-%d-%d %d:%d:%d", imu_data.year, imu_data.month, imu_data.date, imu_data.hour, imu_data.minute, imu_data.second);
-		font->OverlayText_edge_alig(image, width, height,
-						str_temp, 5, 5, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),3);
-		sprintf(str_temp, "yaw: %.3f", imu_data.yaw);
-		font->OverlayText_edge_alig(image, width, height,
-						str_temp, width, 5, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-		sprintf(str_temp, "pitch: %.3f", imu_data.pitch);
-		font->OverlayText_edge_alig(image, width, height,
-						str_temp, width, 45, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-		sprintf(str_temp, "roll: %.3f", imu_data.roll);
-		font->OverlayText_edge_alig(image, width, height,
-						str_temp, width, 85, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-		sprintf(str_temp, "log: %.3f", imu_data.longitude);
-		font->OverlayText_edge_alig(image, width, height,
-						str_temp, width, 125, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-		sprintf(str_temp, "lat: %.3f", imu_data.latitude);
-		font->OverlayText_edge_alig(image, width, height,
-						str_temp, width, 165, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
-		sprintf(str_temp, "hgt: %.3f", imu_data.height);
-		font->OverlayText_edge_alig(image, width, height,
-						str_temp, width, 205, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);	
-	}
+	// if(osd_ctl_switch.imu_data_osd_switch == 1){
+	// 	sprintf(str_temp, "%d-%d-%d %d:%d:%d", imu_data.year, imu_data.month, imu_data.date, imu_data.hour, imu_data.minute, imu_data.second);
+	// 	font->OverlayText_edge_alig(image, width, height,
+	// 					str_temp, 5, 5, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),3);
+	// 	sprintf(str_temp, "yaw: %.3f", imu_data.yaw);
+	// 	font->OverlayText_edge_alig(image, width, height,
+	// 					str_temp, width, 5, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	// 	sprintf(str_temp, "pitch: %.3f", imu_data.pitch);
+	// 	font->OverlayText_edge_alig(image, width, height,
+	// 					str_temp, width, 45, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	// 	sprintf(str_temp, "roll: %.3f", imu_data.roll);
+	// 	font->OverlayText_edge_alig(image, width, height,
+	// 					str_temp, width, 85, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	// 	sprintf(str_temp, "log: %.3f", imu_data.longitude);
+	// 	font->OverlayText_edge_alig(image, width, height,
+	// 					str_temp, width, 125, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	// 	sprintf(str_temp, "lat: %.3f", imu_data.latitude);
+	// 	font->OverlayText_edge_alig(image, width, height,
+	// 					str_temp, width, 165, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);
+	// 	sprintf(str_temp, "hgt: %.3f", imu_data.height);
+	// 	font->OverlayText_edge_alig(image, width, height,
+	// 					str_temp, width, 205, make_float4(0, 255, 0, 255), make_float4(0, 0, 0, 10),0);	
+	// }
 	
 	//cam info
 	if(osd_ctl_switch.cam_info_osd_switch == 1){

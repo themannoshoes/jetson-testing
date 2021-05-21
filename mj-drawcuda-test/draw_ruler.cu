@@ -3,6 +3,49 @@
 #include <float.h>
 #include <math.h>
 
+#define YAW_MIN_VAL 0.0f
+#define YAW_MAX_VAL 360.0f
+#define PITCH_MIN_VAL -90.0f
+#define PITCH_MAX_VAL  90.0f
+
+
+/*
+description: find the min and max of 3 value
+*/
+int2 find_the_min_n_max_of_3_value(int value1, int value2 , int value3)
+{
+	int min_x = 0;
+	int max_x = 0;
+	int2 ret_min_and_max;
+
+	if(value1 > value2){
+		min_x = value2;
+		max_x = value1;
+	}else{
+		min_x = value1;
+		max_x = value2;
+	}
+
+	if(min_x > value3){
+		min_x = value3;
+	}
+
+	if(max_x < value3){
+		max_x = value3;
+	}
+	ret_min_and_max = make_int2(min_x, max_x);
+	return ret_min_and_max;
+}
+
+void angle_restrain_in_0_to_360(float & angle)
+{
+	if(angle < 0.0f)angle += 360.0f;
+	if(angle > 360.0f)angle -= 360.0f;  
+}
+
+
+
+
 
 /*
 * draw a graduated ruler, the orgin position is parameter "int2 pos"
@@ -37,10 +80,12 @@ __global__ void gpuDrawLevelRuler (uchar3 * img, int width, int height, int rule
 	
 	int tooth_num = 12;
 	float tooth_gap = (float)ruler_len / tooth_num;
-	int i;
+	int i, img_offset;
 
-	if(box_y == (ruler_tooth_height - thickness /2) ){
+	if(box_y == (ruler_tooth_height-1 - thickness /2) ){
 		for(i = 0; i < thickness;i++){
+			img_offset = img_y + i - thickness/2;
+			if(img_offset >= height || img_offset <0)break;
 			img[ (img_y + i - thickness/2) * width + img_x] = pixel_temp;
 		}
 	}
@@ -54,6 +99,8 @@ __global__ void gpuDrawLevelRuler (uchar3 * img, int width, int height, int rule
 	if( mod < 1
 	|| box_x == ruler_len -1){
 		for(i = 0;i < thickness;i++){
+			img_offset = img_x + i - thickness/2;
+			if(img_offset >= width || img_offset < 0)break;
 			img[img_y * width + (img_x + i - thickness/2)] = pixel_temp;
 		}
 	}
@@ -94,10 +141,12 @@ __global__ void gpuDrawVerticalRuler (uchar3 * img, int width, int height, int r
 	
 	int tooth_num = 12;
 	float tooth_gap = (float)ruler_len / tooth_num;
-	int i;
+	int i, img_offset;
 
-	if(box_x == (ruler_tooth_height - thickness/2)){
+	if(box_x == (ruler_tooth_height-1 - thickness/2)){
 		for(i = 0;i < thickness;i++){
+			img_offset = img_x + i - thickness/2;
+			if(img_offset >= width || img_offset < 0)break;
 			img[ img_y * width + (img_x + i - thickness/2)] = pixel_temp;
 		}
 	}
@@ -111,6 +160,8 @@ __global__ void gpuDrawVerticalRuler (uchar3 * img, int width, int height, int r
 	if( mod < 1
 	|| box_y == ruler_len -1){
 		for(i = 0;i < thickness;i++){
+			img_offset = img_y + i - thickness/2;
+			if(img_offset >= height || img_offset < 0)break;
 			img[(img_y + i - thickness/2) * width + img_x] = pixel_temp;
 		}
 	}
@@ -178,8 +229,8 @@ __global__ void gpuDrawStraightLines(uchar3 * img, int width, int height, int th
 		img_x_f = img_x;	
 		img_y_f = ((float)pos1.y - pos2.y) / (pos1.x - pos2.x) * (img_x_f - pos1.x) + pos1.y;
 		err_img_y_n_line = img_y_f - img_y;
-		if(err_img_y_n_line <= 1
-		&& err_img_y_n_line >= 0 ){
+		if(err_img_y_n_line < 1
+		&& err_img_y_n_line >=0 ){
 			img[img_y * width + img_x] = pixel_temp;
 		}
 	}else{
@@ -192,8 +243,8 @@ __global__ void gpuDrawStraightLines(uchar3 * img, int width, int height, int th
 		img_y_f = img_y;
 		img_x_f = ((float)pos1.x - pos2.x) / (pos1.y - pos2.y) * (img_y_f - pos1.y) + pos1.x;
 		err_img_x_n_line = img_x_f - img_x;
-		if(err_img_x_n_line <= 1
-		&& err_img_x_n_line >= 0){
+		if(err_img_x_n_line < 1
+		&& err_img_x_n_line >=0){
 			img[img_y * width + img_x] = pixel_temp;
 		}
 	}else{
@@ -269,37 +320,9 @@ void app_draw_a_line_on_img(uchar3* img, int width, int height, int thickness, i
 }
 
 
-/*
-description: find the min and max of 3 value
-*/
-int2 find_the_min_n_max_of_3_value(int value1, int value2 , int value3)
-{
-	int min_x = 0;
-	int max_x = 0;
-	int2 ret_min_and_max;
-
-	if(value1 > value2){
-		min_x = value2;
-		max_x = value1;
-	}else{
-		min_x = value1;
-		max_x = value2;
-	}
-
-	if(min_x > value3){
-		min_x = value3;
-	}
-
-	if(max_x < value3){
-		max_x = value3;
-	}
-	ret_min_and_max = make_int2(min_x, max_x);
-	return ret_min_and_max;
-}
-
 
 /*
-description: application to draw a line with two point
+description: application to draw a triangle with 3 point
 para:
 */
 void app_draw_a_triangle_on_img(uchar3* img, int width, int height, int thickness, int2 pos1, int2 pos2, int2 pos3)
@@ -315,8 +338,8 @@ void app_draw_a_triangle_on_img(uchar3* img, int width, int height, int thicknes
 	max_y = min_n_max_y.y;
 
 	//get the box width and box height
-	int box_width = max_x - min_x;
-	int box_height = max_y - min_y;
+	int box_width = max_x - min_x + 1;
+	int box_height = max_y - min_y + 1;
 
 	if(box_height > height)box_height = height;
 	if(box_width > width )box_width = width;
@@ -342,7 +365,7 @@ void app_draw_a_triangle_on_img(uchar3* img, int width, int height, int thicknes
 description: draw a triangle in a box based on 2 point
 para "orientate_flag" :  0x01:level; 0x00: vertical
 */
-void draw_triangle_in_a_box(uchar3* img, int width, int height, int thickness, int orientate_flag, int2 pos1, int2 pos2)
+void app_draw_triangle_in_a_box(uchar3* img, int width, int height, int thickness, int orientate_flag, int2 pos1, int2 pos2)
 {
 	int2 triag_pos1, triag_pos2, triag_pos3, temp_int2;
 	int box_min_x, box_min_y,box_max_x, box_max_y;
@@ -367,7 +390,7 @@ void draw_triangle_in_a_box(uchar3* img, int width, int height, int thickness, i
 
 		triag_pos3.x = box_max_x;
 		triag_pos3.y = (box_max_y + box_min_y)/2;
-	}else{
+	}else{  //this case is "vertical"
 		triag_pos1.x = box_min_x;
 		triag_pos1.y = box_min_y;
 
@@ -379,5 +402,57 @@ void draw_triangle_in_a_box(uchar3* img, int width, int height, int thickness, i
 	}
 	app_draw_a_triangle_on_img(img, width, height, thickness, triag_pos1, triag_pos2, triag_pos3);
 
+}
+
+/*****************
+	application
+	function
+	level:3
+*****************/
+
+/*
+description: draw a indicating graduated ruler for pitch & yaw data
+para:
+*/
+void app_draw_indicating_ruler_for_pitch_N_yaw(uchar3* img, int width, int height, int thickness)
+{
+	//imu_data.yaw  = 320;
+	//imu_data.pitch  = 22.123;
+
+	const int lv_ruler_tooth_height = 6;
+	const int vtc_ruler_tooth_height = 6;
+	const int triag_box_bottom_len = 5;
+	const int triag_box_side_len = 10;
+
+	/* input parameter */
+	float yaw_catched   = imu_data.yaw;
+	float pitch_catched = imu_data.pitch;
+	int lv_ruler_len    = width /2;
+	int vtc_ruler_len   = height/2;
+	int2 lv_ruler_pos = make_int2(10, height - lv_ruler_tooth_height - 3);
+	int2 vtc_ruler_pos = make_int2(width - vtc_ruler_tooth_height - 3, 10);
+	
+
+	int yaw_pixel_len, pitch_pixel_len;
+	int2 yaw_indic_triag_box_pos1, yaw_indic_triag_box_pos2, pitch_indic_triag_box_pos1, pitch_indic_triag_box_pos2;
+
+	angle_restrain_in_0_to_360(yaw_catched);
+	yaw_pixel_len   = (yaw_catched / YAW_MAX_VAL) * lv_ruler_len;
+	pitch_pixel_len = ((pitch_catched + 90) / (PITCH_MAX_VAL - PITCH_MIN_VAL)) * vtc_ruler_len;
+	
+	yaw_indic_triag_box_pos1.x   = lv_ruler_pos.x + yaw_pixel_len - triag_box_bottom_len /2;
+	yaw_indic_triag_box_pos1.y   = lv_ruler_pos.y - triag_box_side_len - 1;  //leave 1 pixel between ruler & triangle 
+	yaw_indic_triag_box_pos2.x = yaw_indic_triag_box_pos1.x + triag_box_bottom_len -1;
+	yaw_indic_triag_box_pos2.y = yaw_indic_triag_box_pos1.y + triag_box_side_len -1;
+
+	pitch_indic_triag_box_pos1.x = vtc_ruler_pos.x - triag_box_side_len - 1;
+	pitch_indic_triag_box_pos1.y = vtc_ruler_pos.y + pitch_pixel_len - triag_box_bottom_len /2;
+	pitch_indic_triag_box_pos2.x = pitch_indic_triag_box_pos1.x + triag_box_side_len -1;
+	pitch_indic_triag_box_pos2.y = pitch_indic_triag_box_pos1.y + triag_box_bottom_len -1;
+
+	app_draw_level_ruler_on_img(img, width, height, lv_ruler_len, lv_ruler_tooth_height, thickness, lv_ruler_pos);
+	app_draw_vertical_ruler_on_img(img, width, height, vtc_ruler_len, vtc_ruler_tooth_height, thickness, vtc_ruler_pos);
+	app_draw_triangle_in_a_box(img, width, height, thickness, 0x00, yaw_indic_triag_box_pos1, yaw_indic_triag_box_pos2);
+	app_draw_triangle_in_a_box(img, width, height, thickness, 0x01, pitch_indic_triag_box_pos1, pitch_indic_triag_box_pos2);
 }
 
